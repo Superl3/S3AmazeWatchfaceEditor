@@ -1,0 +1,24 @@
+{
+  "name": "gtr3",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@zeppos/zeus-cli": "^1.9.2",
+    "express": "^4.18.2",
+    "qrcode": "^1.5.4"
+  },
+  "_moduleAliases": {
+    "zeppos-app-utils": "node_modules/@zeppos/zeus-cli/private-modules/zeppos-app-utils"
+  },
+  "dependencies": {
+    "jimp": "^0.22.12"
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "configVersion": "v2",
+  "app": {
+    "appId": 1120255,
+    "appName": "Minimal Art V1.3",
+    "appType": "watchface",
+    "version": {
+      "code": 7,
+      "name": "1.7"
+    },
+    "vender": "zepp",
+    "description": "Minimal art digital watchface",
+    "icon": "icon.png"
+  },
+  "permissions": [],
+  "runtime": {
+    "apiVersion": {
+      "compatible": "1.0.0",
+      "target": "1.0.1",
+      "minVersion": "1.0.0"
+    }
+  },
+  "targets": {
+    "454x454-amazfit-gtr-3": {
+      "module": {
+        "watchface": {
+          "path": "watchface/index",
+          "main": 1,
+          "editable": 0,
+          "lockscreen": 1
+        }
+      },
+      "platforms": [
+        {
+          "name": "Zurich",
+          "deviceSource": 226
+        },
+        {
+          "name": "ZurichW",
+          "deviceSource": 227
+        }
+      ],
+      "designWidth": 454
+    }
+  },
+  "i18n": {
+    "en-US": {
+      "appName": "Minimal Art V1.3"
+    }
+  },
+  "defaultLanguage": "en-US",
+  "debug": false
+}

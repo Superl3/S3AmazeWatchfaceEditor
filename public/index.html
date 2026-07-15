@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Amazfit GTR 3 - WYSIWYG Watchface Editor</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <header class="app-header">
+      <div class="logo">
+        <span class="logo-accent">GTR 3</span> WYSIWYG Editor
+      </div>
+      <div class="header-status">
+        <span class="status-indicator connected"></span> Local CLI Engine Active
+      </div>
+    </header>
+
+    <main class="editor-main">
+      <!-- Left Panel: Simulator & Compiler -->
+      <section class="visual-panel">
+        <div class="simulator-wrapper">
+          <!-- Watch Bezel -->
+          <div class="watch-bezel">
+            <div class="watch-screen" id="watchScreen">
+              <!-- Watchface Content (WYSIWYG Workspace) -->
+              <div class="watch-face" id="wfPreview">
+                <!-- Background Layer -->
+                <div id="wfBackground" style="position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:1;"></div>
+                
+                <div class="wf-outer-ring" style="z-index: 2;"></div>
+                
+                <!-- Alignment Guides for Snapping -->
+                <div class="snap-guide vertical" id="guideV" style="z-index: 10;"></div>
+                <div class="snap-guide horizontal" id="guideH" style="z-index: 10;"></div>
+                
+                <!-- Draggable Widgets Container (instantiated by JS) -->
+                <div id="widgetsContainer" style="z-index: 5;"></div>
+              </div>
+            </div>
+            <!-- Physical watch crowns -->
+            <div class="crown-top"></div>
+            <div class="crown-bottom"></div>
+          </div>
+        </div>
+
+        <!-- Action / Build Panel -->
+        <div class="build-card glass">
+          <h2>Compiler Actions</h2>
+          <p class="card-desc">Clicking build will generate <code>index.js</code> and compile the ZAB package on your local system.</p>
+          <div class="action-buttons">
+            <button id="btnSave" class="btn btn-secondary">Save Configuration</button>
+            <button id="btnBuild" class="btn btn-primary">Compile & Generate QR</button>
+          </div>
+          <!-- Loader -->
+          <div class="build-loader" id="buildLoader">
+            <div class="spinner"></div>
+            <span>Running <code>zeus build</code> & <code>preview</code>...</span>
+          </div>
+          <!-- Output QR Code -->
+          <div class="qr-output-container" id="qrOutputContainer">
+            <h3>Scan with Zepp App</h3>
+            <div class="qr-frame">
+              <img id="qrImg" src="" alt="QR Code Output">
+            </div>
+            <p class="qr-expiry">Expires in 7 days. Ensure developer mode is active.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Panel: Configurations & Editors -->
+      <section class="controls-panel">
+        <!-- 1. Theme Presets & Global Fonts -->
+        <div class="control-card glass">
+          <h2>Global Settings</h2>
+          <div class="preset-grid" style="margin-bottom: 15px;">
+            <button class="preset-btn active" data-preset="0">Cyber Coral</button>
+            <button class="preset-btn" data-preset="1">Strawberry Yogurt</button>
+            <button class="preset-btn" data-preset="2">Pistachio Cream</button>
+            <button class="preset-btn" data-preset="3">Blueberry Lavender</button>
+            <button class="preset-btn" data-preset="4">Banana Vanilla</button>
+            <button class="preset-btn" data-preset="5">Soft Peach Melba</button>
+          </div>
+          <div class="form-group row">
+            <div class="input-item">
+              <label for="fontFamily">Default Font Family</label>
+              <select id="fontFamily">
+                <option value="Outfit" selected>Outfit (Modern / Geometric)</option>
+                <option value="Orbitron">Orbitron (Digital / Tech)</option>
+                <option value="Share Tech Mono">Share Tech Mono (Retro LED)</option>
+                <option value="JetBrains Mono">JetBrains Mono (Sleek Monospace)</option>
+              </select>
+            </div>
+            <div class="input-item">
+              <label for="backgroundStyle">Background Pattern</label>
+              <select id="backgroundStyle">
+                <option value="none" selected>Solid Black</option>
+                <option value="grid">Tech Grid Pattern</option>
+                <option value="radar">Concentric Radar Circles</option>
+                <option value="dots">Dot Matrix Pattern</option>
+                <option value="floral">Luxury Damask Wallpaper</option>
+                <option value="mandala">Geometric Mandala</option>
+                <option value="waves">Luxury Guilloché Waves</option>
+                <option value="carbon">Carbon Fiber Weave</option>
+                <option value="honeycomb">Honeycomb Hex Mesh</option>
+                <option value="sunburst">Guilloché Sunburst</option>
+                <option value="stars">Star Constellations</option>
+                <option value="circuit">Electronic Circuitry</option>
+                <option value="damask">Ornate Damask Motif</option>
+                <option value="hatch">Diagonal Hatching</option>
+                <option value="pinstripe">Tuxedo Pinstripes</option>
+                <option value="poly">Geometric Poly Mesh</option>
+                <option value="chevron">Luxury Chevron Zigzag</option>
+                <option value="crosshair">Tech Crosshair Grid</option>
+                <option value="ripple">Concentric Ripple Grid</option>
+                <option value="maze">Generative Truchet Maze</option>
+                <option value="baroque">Royal Baroque Wallpaper</option>
+                <option value="meander">Greek Key Meander Lattice</option>
+              </select>
+            </div>
+          </div>
+          <!-- Background Positioning Sliders -->
+          <div class="form-group range-group" style="margin-top: 15px;">
+            <div class="range-item">
+              <div class="range-label">
+                <span>Background Scale</span>
+                <span id="valBgScale">100%</span>
+              </div>
+              <input type="range" id="bgScale" min="80" max="150" value="100">
+            </div>
+            <div class="range-item">
+              <div class="range-label">
+                <span>Pattern Symbol Spacing</span>
+                <span id="valBgSpacing">50px</span>
+              </div>
+              <input type="range" id="bgSpacing" min="10" max="120" value="50">
+            </div>
+            <div class="range-item">
+              <div class="range-label">
+                <span>Pattern Opacity (Dimmed Level)</span>
+                <span id="valBgOpacity">100%</span>
+              </div>
+              <input type="range" id="bgOpacity" min="5" max="100" value="40">
+            </div>
+            <div class="range-item">
+              <div class="range-label">
+                <span>Pattern Rotation</span>
+                <span id="valBgRotation">0°</span>
+              </div>
+              <input type="range" id="bgRotation" min="0" max="360" value="0">
+            </div>
+            <div class="range-item">
+              <div class="range-label">
+                <span>Background X-Offset</span>
+                <span id="valBgX">0px</span>
+              </div>
+              <input type="range" id="bgX" min="-100" max="100" value="0">
+            </div>
+            <div class="range-item">
+              <div class="range-label">
+                <span>Background Y-Offset</span>
+                <span id="valBgY">0px</span>
+              </div>
+              <input type="range" id="bgY" min="-100" max="100" value="0">
+            </div>
+          </div>
+          <div class="form-group row" style="margin-top: 15px;">
+            <div class="input-item">
+              <label for="colorGlobalPrimary">Accent Color Override</label>
+              <input type="color" id="colorGlobalPrimary" value="#ff5a36" style="height: 38px;">
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Dynamic Component Palette -->
+        <div class="control-card glass">
+          <h2>Component Manager</h2>
+          <p class="card-desc" style="margin-bottom: 10px;">Drag elements on the watch screen, or add/delete them below.</p>
+          <div class="form-group row" style="margin-bottom: 15px;">
+            <div class="input-item">
+              <select id="addComponentSelect">
+                <option value="" disabled selected>Choose component...</option>
+                <option value="HOUR">Hour Digits</option>
+                <option value="MINUTE">Minute Digits</option>
+                <option value="DIVIDER">Divider Line</option>
+                <option value="BATTERY">Battery Complication</option>
+                <option value="STEP">Steps Complication</option>
+                <option value="HEART">Heart Rate Complication</option>
+                <option value="CAL">Calories Complication</option>
+                <option value="DISTANCE">Distance Complication</option>
+                <option value="WEEKDAY">Weekday Text (MON)</option>
+                <option value="DATE">Month/Day (JUL 13)</option>
+              </select>
+            </div>
+            <button id="btnAddComponent" class="btn btn-primary" style="flex: 0 0 120px; padding: 10px;">+ Add</button>
+          </div>
+          <!-- Elements layer list -->
+          <div class="layer-list" id="layerList">
+            <!-- Populated dynamically by app.js -->
+          </div>
+        </div>
+
+        <!-- 3. Contextual Properties Inspector (Shows when widget is selected) -->
+        <div class="control-card glass property-inspector-card" id="inspectorCard">
+          <h2>Property Inspector</h2>
+          <div class="inspector-empty" id="inspectorEmpty">
+            <p>Click on any widget in the watch face to edit its properties.</p>
+          </div>
+          <div class="inspector-content" id="inspectorContent" style="display: none;">
+            <div class="inspector-header">
+              <span class="inspector-badge" id="inspectorType">WIDGET</span>
+              <button id="btnDeleteWidget" class="btn-delete-icon" title="Delete component">🗑️</button>
+            </div>
+            
+            <div class="form-group row" style="margin-top: 15px;">
+              <div class="input-item">
+                <label for="inspectX">X Position</label>
+                <input type="number" id="inspectX" min="0" max="454">
+              </div>
+              <div class="input-item">
+                <label for="inspectY">Y Position</label>
+                <input type="number" id="inspectY" min="0" max="454">
+              </div>
+            </div>
+
+            <div class="form-group range-group" style="margin-top: 15px;" id="inspectSizeContainer">
+              <div class="range-item">
+                <div class="range-label">
+                  <span>Widget Size</span>
+                  <span id="inspectValSize">22px</span>
+                </div>
+                <input type="range" id="inspectSize" min="12" max="110" value="22">
+              </div>
+            </div>
+
+            <!-- Divider Line Dimensions (Only shown for DIVIDER widgets) -->
+            <div class="form-group row" style="margin-top: 15px; display: none;" id="inspectDimensionsContainer">
+              <div class="input-item">
+                <label for="inspectWidth">Width (Thickness)</label>
+                <input type="number" id="inspectWidth" min="1" max="454" value="2">
+              </div>
+              <div class="input-item">
+                <label for="inspectHeight">Height (Length)</label>
+                <input type="number" id="inspectHeight" min="1" max="454" value="320">
+              </div>
+            </div>
+
+            <div class="form-group row" style="margin-top: 15px;">
+              <div class="input-item">
+                <label for="inspectColor">Color Type</label>
+                <select id="inspectColor">
+                  <option value="primary">Primary Theme Accent</option>
+                  <option value="secondary">Secondary Theme Accent</option>
+                  <option value="custom">Custom Hex Color</option>
+                </select>
+              </div>
+              <div class="input-item" id="inspectCustomColorContainer" style="display: none;">
+                <label for="inspectCustomColor">Custom Hex</label>
+                <input type="color" id="inspectCustomColor" value="#ff5a36" style="height: 38px;">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Package Config -->
+        <div class="control-card glass">
+          <h2>Package Settings</h2>
+          <div class="form-group row">
+            <div class="input-item">
+              <label for="appName">AppName</label>
+              <input type="text" id="appName" value="Minimal Art V1.2">
+            </div>
+            <div class="input-item">
+              <label for="appId">AppID</label>
+              <input type="number" id="appId" value="1120255">
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+node_modules/
+.gemini/
+qrcode.png
+config.json
+.system_generated/
+*.log
+test_wf/node_modules/
+test_wf/dist/
+test_wf/build/
+test_wf/yarn-error.log
+test_wf/npm-debug.log
+.DS_Store
+Thumbs.db
