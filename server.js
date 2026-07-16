@@ -243,7 +243,18 @@ app.post('/api/build', (req, res) => {
   }
 
   console.log('Compiling watchface...');
-  exec('npx zeus build', { cwd: testWfDir }, (err, stdout, stderr) => {
+  const userEnv = {
+    ...process.env,
+    USERPROFILE: 'C:\\Users\\bug95',
+    HOME: 'C:\\Users\\bug95',
+    HOMEPATH: '\\Users\\bug95',
+    HOMEDRIVE: 'C:'
+  };
+
+  exec('npx zeus build', { 
+    cwd: testWfDir,
+    env: userEnv
+  }, (err, stdout, stderr) => {
     if (err) {
       console.error(err);
       return res.status(500).json({ error: 'Zeus build failed', details: stdout || stderr });
@@ -252,7 +263,8 @@ app.post('/api/build', (req, res) => {
     console.log('Spawning zeus preview process in background...');
     previewProcess = spawn('npx', ['zeus', 'preview'], {
       cwd: testWfDir,
-      shell: true
+      shell: true,
+      env: userEnv
     });
 
     previewProcess.stdout.on('data', (data) => {
