@@ -1572,117 +1572,55 @@ function generateAodJs(config) {
       color: 0x4a4e5d
     })
       `;
-    } else if (w.type === 'BATTERY') {
-      const scale = (w.iconSize || 24) / 24;
-      const textXOffset = w.showProgress ? 50 : Math.round(24 * scale) + 6;
-      const textYOffset = w.showProgress ? -12 : -16;
-
-      let drawIconCode = '';
-      if (w.iconStyle === '2') {
-        drawIconCode = `
-    hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x}, y: ${w.y - Math.round(12 * scale)}, w: ${Math.round(14 * scale)}, h: ${Math.round(24 * scale)}, radius: ${Math.round(2 * scale)}, color: 0x333644 })
-        `;
-      } else if (w.iconStyle === '3') {
-        drawIconCode = `
-    hmUI.createWidget(hmUI.widget.ARC, { x: ${w.x}, y: ${w.y - Math.round(12 * scale)}, w: ${Math.round(24 * scale)}, h: ${Math.round(24 * scale)}, start_angle: 0, end_angle: 360, color: 0x333644, line_width: 2 })
-        `;
-      } else {
-        drawIconCode = `
-    hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x}, y: ${w.y - Math.round(8 * scale)}, w: ${Math.round(24 * scale)}, h: ${Math.round(14 * scale)}, radius: ${Math.round(2 * scale)}, color: 0x333644 })
-        `;
-      }
-
-      buildWidgets += `
-    // Battery Complication (Dimmed AOD)
-    ${drawIconCode}
-    this.batteryTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
-      x: ${w.x + textXOffset},
-      y: ${w.y + textYOffset},
-      w: 70,
-      h: 30,
-      text_size: ${w.size},
-      color: 0x5c6275,
-      align_h: hmUI.align.LEFT,
-      align_v: hmUI.align.CENTER_V,
-      ${fontPath}
-      text: '85%'
-    })
-      `;
-    } else if (w.type === 'STEP') {
-      const scale = (w.iconSize || 24) / 24;
-      const textXOffset = w.showProgress ? 50 : Math.round(24 * scale) + 6;
-      const textYOffset = w.showProgress ? -12 : -16;
-
-      let drawIconCode = '';
-      if (w.iconStyle === '2') {
-        drawIconCode = `
-    hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + Math.round(2 * scale)}, y: ${w.y + Math.round(2 * scale)}, w: Math.round(8 * scale)}, h: Math.round(14 * scale)}, radius: Math.round(4 * scale)}, color: 0x333644 })
-        `;
-      } else if (w.iconStyle === '3') {
-        drawIconCode = `
-    hmUI.createWidget(hmUI.widget.ARC, { x: ${w.x}, y: ${w.y - Math.round(12 * scale)}, w: ${Math.round(24 * scale)}, h: ${Math.round(24 * scale)}, start_angle: 0, end_angle: 360, color: 0x333644, line_width: 2 })
-        `;
-      } else {
-        drawIconCode = `
-    hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x}, y: ${w.y + Math.round(2 * scale)}, w: Math.round(5 * scale)}, h: Math.round(4 * scale)}, color: 0x333644 })
-        `;
-      }
-
-      buildWidgets += `
-    // Steps Complication (Dimmed AOD)
-    ${drawIconCode}
-    this.stepsTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
-      x: ${w.x + textXOffset},
-      y: ${w.y + textYOffset},
-      w: 74,
-      h: 30,
-      text_size: ${w.size},
-      color: 0x5c6275,
-      align_h: hmUI.align.LEFT,
-      align_v: hmUI.align.CENTER_V,
-      ${fontPath}
-      text: '8,420'
-    })
-      `;
-    } else if (w.type === 'WEEKDAY') {
-      buildWidgets += `
-    // Weekday Widget (Dimmed AOD)
-    this.weekdayTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
-      x: ${w.x},
-      y: ${w.y - 12},
-      w: 100,
-      h: 25,
-      text_size: ${w.size},
-      color: 0x5c6275,
-      align_h: hmUI.align.CENTER_H,
-      align_v: hmUI.align.CENTER_V,
-      ${fontPath}
-      text: 'MON'
-    })
-      `;
-    } else if (w.type === 'DATE') {
-      buildWidgets += `
-    // Date Widget (Dimmed AOD)
-    this.monthDayTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
-      x: ${w.x},
-      y: ${w.y - 12},
-      w: 100,
-      h: 25,
-      text_size: ${w.size},
-      color: 0x5c6275,
-      align_h: hmUI.align.CENTER_H,
-      align_v: hmUI.align.CENTER_V,
-      ${fontPath}
-      text: 'JUL 16'
-    })
-      `;
     }
   });
 
-  return `WatchFace({
+  return `const THEMES = [
+  {
+    line: ${config.lineColor.replace('#', '0x')},
+    minute: ${config.minuteColor.replace('#', '0x')},
+    steps: ${config.stepsColor.replace('#', '0x')}
+  },
+  {
+    line: 0xff7b90,    // Strawberry Yogurt
+    minute: 0xfff0f2,
+    steps: 0xff7b90
+  },
+  {
+    line: 0x7cd1a1,    // Mint Pistachio
+    minute: 0xf0faf4,
+    steps: 0x7cd1a1
+  },
+  {
+    line: 0x8f9eff,    // Blueberry Lavender
+    minute: 0xf2f4ff,
+    steps: 0x8f9eff
+  },
+  {
+    line: 0xffd670,    // Banana Cream
+    minute: 0xfffcf2,
+    steps: 0xffd670
+  },
+  {
+    line: 0xff9e7d,    // Soft Peach Melba
+    minute: 0xfff5f2,
+    steps: 0xff9e7d
+  }
+]
+
+WatchFace({
   onInit() {
     console.log('aod page.js on init invoke')
     this.timeSensor = hmSensor.createSensor(hmSensor.id.TIME)
+    this.currentThemeIndex = ${config.themeIndex}
+    try {
+      this.currentThemeIndex = hmFS.SysProGetInt('theme_idx') !== undefined ? hmFS.SysProGetInt('theme_idx') : ${config.themeIndex}
+      if (this.currentThemeIndex < 0 || this.currentThemeIndex >= THEMES.length) {
+        this.currentThemeIndex = ${config.themeIndex}
+      }
+    } catch (e) {
+      console.log('Read theme index failed', e)
+    }
   },
 
   build() {
@@ -1701,6 +1639,7 @@ function generateAodJs(config) {
     })
 
 ${buildWidgets}
+    this.applyThemeColors()
     this.updateTime()
     this.setupListeners()
   },
@@ -1715,6 +1654,7 @@ ${buildWidgets}
         if (!this.timeTimer) {
           this.timeTimer = timer.createTimer(0, 60000, updateTimeCb)
         }
+        this.applyThemeColors()
         this.updateTime()
       },
       pause_call: () => {
@@ -1724,6 +1664,21 @@ ${buildWidgets}
         }
       }
     })
+  },
+
+  applyThemeColors() {
+    const theme = THEMES[this.currentThemeIndex]
+    if (this.hourTextWidget) {
+      this.hourTextWidget.setProperty(hmUI.prop.COLOR, theme.line)
+    }
+    if (this.minuteTextWidget) {
+      this.minuteTextWidget.setProperty(hmUI.prop.COLOR, theme.minute)
+    }
+    if (this.centerLineWidget) {
+      this.centerLineWidget.setProperty(hmUI.prop.MORE, {
+        color: theme.line
+      })
+    }
   },
 
   updateTime() {
@@ -1738,23 +1693,6 @@ ${buildWidgets}
     }
     if (this.minuteTextWidget) {
       this.minuteTextWidget.setProperty(hmUI.prop.TEXT, mm)
-    }
-
-    const WEEK_DAYS = ['', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
-    const MONTH_NAMES = ['', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
-
-    const day = this.timeSensor.day
-    const monthIndex = this.timeSensor.month
-    const weekIndex = this.timeSensor.week
-
-    const monthStr = MONTH_NAMES[monthIndex] || ''
-    const weekStr = WEEK_DAYS[weekIndex] || ''
-
-    if (this.weekdayTextWidget) {
-      this.weekdayTextWidget.setProperty(hmUI.prop.TEXT, weekStr)
-    }
-    if (this.monthDayTextWidget) {
-      this.monthDayTextWidget.setProperty(hmUI.prop.TEXT, \`\${monthStr} \${day}\`)
     }
   },
 

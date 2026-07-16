@@ -203,14 +203,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const primary = colorGlobalPrimary.value;
     const secondary = PRESETS[currentThemeIndex].secondary;
 
-    if (isAodMode) {
-      // AOD style: dim colors (low brightness grayscale or dark slate/grey)
-      document.documentElement.style.setProperty('--primary-color', '#8a90a6');
-      document.documentElement.style.setProperty('--secondary-color', '#5c6275');
-    } else {
-      document.documentElement.style.setProperty('--primary-color', primary);
-      document.documentElement.style.setProperty('--secondary-color', secondary);
-    }
+    document.documentElement.style.setProperty('--primary-color', primary);
+    document.documentElement.style.setProperty('--secondary-color', secondary);
 
     // Apply custom font classes
     wfPreview.className = 'watch-face';
@@ -412,6 +406,14 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       widgetDiv.innerHTML = getWidgetHTML(w);
+
+      // Hide metadata complications in AOD Mode (Keep only HOUR, MINUTE, DIVIDER)
+      if (isAodMode && !['HOUR', 'MINUTE', 'DIVIDER'].includes(w.type)) {
+        widgetDiv.style.display = 'none';
+      } else {
+        widgetDiv.style.display = 'flex';
+      }
+
       widgetsContainer.appendChild(widgetDiv);
 
       // 2. Render in Sidebar Layer Manager
