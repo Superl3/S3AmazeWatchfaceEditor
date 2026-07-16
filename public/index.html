@@ -91,7 +91,7 @@
             <button class="preset-btn" data-preset="4">Banana Vanilla</button>
             <button class="preset-btn" data-preset="5">Soft Peach Melba</button>
           </div>
-          <div class="form-group row">
+          <div class="form-group row" style="margin-bottom: 15px;">
             <div class="input-item">
               <label for="fontFamily">Default Font Family</label>
               <select id="fontFamily">
@@ -102,84 +102,96 @@
               </select>
             </div>
             <div class="input-item">
-              <label for="backgroundStyle">Background Pattern</label>
-              <select id="backgroundStyle">
-                <option value="none" selected>Solid Black</option>
-                <option value="grid">Tech Grid Pattern</option>
-                <option value="radar">Concentric Radar Circles</option>
-                <option value="dots">Dot Matrix Pattern</option>
-                <option value="floral">Luxury Damask Wallpaper</option>
-                <option value="mandala">Geometric Mandala</option>
-                <option value="waves">Luxury Guilloché Waves</option>
-                <option value="carbon">Carbon Fiber Weave</option>
-                <option value="honeycomb">Honeycomb Hex Mesh</option>
-                <option value="sunburst">Guilloché Sunburst</option>
-                <option value="stars">Star Constellations</option>
-                <option value="circuit">Electronic Circuitry</option>
-                <option value="damask">Ornate Damask Motif</option>
-                <option value="hatch">Diagonal Hatching</option>
-                <option value="pinstripe">Tuxedo Pinstripes</option>
-                <option value="poly">Geometric Poly Mesh</option>
-                <option value="chevron">Luxury Chevron Zigzag</option>
-                <option value="crosshair">Tech Crosshair Grid</option>
-                <option value="ripple">Concentric Ripple Grid</option>
-                <option value="maze">Generative Truchet Maze</option>
-                <option value="baroque">Royal Baroque Wallpaper</option>
-                <option value="meander">Greek Key Meander Lattice</option>
-              </select>
-            </div>
-          </div>
-          <!-- Background Positioning Sliders -->
-          <div class="form-group range-group" style="margin-top: 15px;">
-            <div class="range-item">
-              <div class="range-label">
-                <span>Background Scale</span>
-                <span id="valBgScale">100%</span>
-              </div>
-              <input type="range" id="bgScale" min="80" max="150" value="100">
-            </div>
-            <div class="range-item">
-              <div class="range-label">
-                <span>Pattern Symbol Spacing</span>
-                <span id="valBgSpacing">50px</span>
-              </div>
-              <input type="range" id="bgSpacing" min="10" max="120" value="50">
-            </div>
-            <div class="range-item">
-              <div class="range-label">
-                <span>Pattern Opacity (Dimmed Level)</span>
-                <span id="valBgOpacity">100%</span>
-              </div>
-              <input type="range" id="bgOpacity" min="5" max="100" value="40">
-            </div>
-            <div class="range-item">
-              <div class="range-label">
-                <span>Pattern Rotation</span>
-                <span id="valBgRotation">0°</span>
-              </div>
-              <input type="range" id="bgRotation" min="0" max="360" value="0">
-            </div>
-            <div class="range-item">
-              <div class="range-label">
-                <span>Background X-Offset</span>
-                <span id="valBgX">0px</span>
-              </div>
-              <input type="range" id="bgX" min="-100" max="100" value="0">
-            </div>
-            <div class="range-item">
-              <div class="range-label">
-                <span>Background Y-Offset</span>
-                <span id="valBgY">0px</span>
-              </div>
-              <input type="range" id="bgY" min="-100" max="100" value="0">
-            </div>
-          </div>
-          <div class="form-group row" style="margin-top: 15px;">
-            <div class="input-item">
               <label for="colorGlobalPrimary">Accent Color Override</label>
               <input type="color" id="colorGlobalPrimary" value="#ff5a36" style="height: 38px;">
             </div>
           </div>
+
+          <!-- Grouped Collapsable Background Settings -->
+          <details class="bg-settings-details" style="margin-top: 15px; border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 15px; background: rgba(255, 255, 255, 0.01); transition: all 0.3s ease;">
+            <summary style="font-weight: 600; cursor: pointer; color: var(--primary-color); outline: none; user-select: none; list-style: none; display: flex; align-items: center; justify-content: space-between;">
+              <span>🖼️ Background & Pattern Settings</span>
+              <span class="details-arrow" style="font-size: 10px; transition: transform 0.2s;">▶</span>
+            </summary>
+            
+            <div style="margin-top: 12px;">
+              <div class="form-group" style="margin-bottom: 15px;">
+                <div class="input-item">
+                  <label for="backgroundStyle">Background Pattern</label>
+                  <select id="backgroundStyle">
+                    <option value="none" selected>Solid Black</option>
+                    <option value="grid">Tech Grid Pattern</option>
+                    <option value="radar">Concentric Radar Circles</option>
+                    <option value="dots">Dot Matrix Pattern</option>
+                    <option value="floral">Luxury Damask Wallpaper</option>
+                    <option value="mandala">Geometric Mandala</option>
+                    <option value="waves">Luxury Guilloché Waves</option>
+                    <option value="carbon">Carbon Fiber Weave</option>
+                    <option value="honeycomb">Honeycomb Hex Mesh</option>
+                    <option value="sunburst">Guilloché Sunburst</option>
+                    <option value="stars">Star Constellations</option>
+                    <option value="circuit">Electronic Circuitry</option>
+                    <option value="damask">Ornate Damask Motif</option>
+                    <option value="hatch">Diagonal Hatching</option>
+                    <option value="pinstripe">Tuxedo Pinstripes</option>
+                    <option value="poly">Geometric Poly Mesh</option>
+                    <option value="chevron">Luxury Chevron Zigzag</option>
+                    <option value="crosshair">Tech Crosshair Grid</option>
+                    <option value="ripple">Concentric Ripple Grid</option>
+                    <option value="maze">Generative Truchet Maze</option>
+                    <option value="baroque">Royal Baroque Wallpaper</option>
+                    <option value="meander">Greek Key Meander Lattice</option>
+                  </select>
+                </div>
+              </div>
+              
+              <!-- Background Positioning Sliders -->
+              <div class="form-group range-group">
+                <div class="range-item">
+                  <div class="range-label">
+                    <span>Background Scale</span>
+                    <span id="valBgScale">100%</span>
+                  </div>
+                  <input type="range" id="bgScale" min="80" max="150" value="100">
+                </div>
+                <div class="range-item">
+                  <div class="range-label">
+                    <span>Pattern Symbol Spacing</span>
+                    <span id="valBgSpacing">50px</span>
+                  </div>
+                  <input type="range" id="bgSpacing" min="10" max="120" value="50">
+                </div>
+                <div class="range-item">
+                  <div class="range-label">
+                    <span>Pattern Opacity (Dimmed Level)</span>
+                    <span id="valBgOpacity">100%</span>
+                  </div>
+                  <input type="range" id="bgOpacity" min="5" max="100" value="40">
+                </div>
+                <div class="range-item">
+                  <div class="range-label">
+                    <span>Pattern Rotation</span>
+                    <span id="valBgRotation">0°</span>
+                  </div>
+                  <input type="range" id="bgRotation" min="0" max="360" value="0">
+                </div>
+                <div class="range-item">
+                  <div class="range-label">
+                    <span>Background X-Offset</span>
+                    <span id="valBgX">0px</span>
+                  </div>
+                  <input type="range" id="bgX" min="-100" max="100" value="0">
+                </div>
+                <div class="range-item">
+                  <div class="range-label">
+                    <span>Background Y-Offset</span>
+                    <span id="valBgY">0px</span>
+                  </div>
+                  <input type="range" id="bgY" min="-100" max="100" value="0">
+                </div>
+              </div>
+            </div>
+          </details>
         </div>
 
         <!-- 2. Dynamic Component Palette -->
