@@ -19,6 +19,7 @@
     "zeppos-app-utils": "node_modules/@zeppos/zeus-cli/private-modules/zeppos-app-utils"
   },
   "dependencies": {
-    "jimp": "^0.22.12"
+    "jimp": "^0.22.12",
+    "pureimage": "^0.4.20"
   }
 }
