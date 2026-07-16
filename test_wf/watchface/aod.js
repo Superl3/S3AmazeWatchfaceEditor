@@ -62,35 +62,35 @@ WatchFace({
     })
 
 
-    // Hour Widget
-    this.hourTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
+    // Hour Widget (AOD)
+    this.hourTextWidget = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
       x: 40,
       y: 148,
       w: 180,
       h: 130,
-      text_size: 96,
-      color: 0x8a90a6,
-      align_h: hmUI.align.CENTER_H,
-      align_v: hmUI.align.CENTER_V,
-      font: 'fonts/Outfit-ExtraBold.ttf',
+      font_array: [
+        'font_hour_undefined/0.png', 'font_hour_undefined/1.png', 'font_hour_undefined/2.png', 'font_hour_undefined/3.png', 'font_hour_undefined/4.png',
+        'font_hour_undefined/5.png', 'font_hour_undefined/6.png', 'font_hour_undefined/7.png', 'font_hour_undefined/8.png', 'font_hour_undefined/9.png'
+      ],
+      h_space: 2,
       text: '00'
     })
       
-    // Minute Widget
-    this.minuteTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
+    // Minute Widget (AOD)
+    this.minuteTextWidget = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
       x: 244,
       y: 148,
       w: 180,
       h: 130,
-      text_size: 96,
-      color: 0x5c6275,
-      align_h: hmUI.align.CENTER_H,
-      align_v: hmUI.align.CENTER_V,
-      font: 'fonts/Outfit-ExtraBold.ttf',
+      font_array: [
+        'font_minute_undefined/0.png', 'font_minute_undefined/1.png', 'font_minute_undefined/2.png', 'font_minute_undefined/3.png', 'font_minute_undefined/4.png',
+        'font_minute_undefined/5.png', 'font_minute_undefined/6.png', 'font_minute_undefined/7.png', 'font_minute_undefined/8.png', 'font_minute_undefined/9.png'
+      ],
+      h_space: 2,
       text: '00'
     })
       
-    // Divider Accent Line
+    // Divider Accent Line (AOD)
     this.centerLineWidget = hmUI.createWidget(hmUI.widget.FILL_RECT, {
       x: 226,
       y: 67,
@@ -127,12 +127,23 @@ WatchFace({
   },
 
   applyThemeColors() {
-    const theme = THEMES[this.currentThemeIndex]
+    const t = this.currentThemeIndex
+    const theme = THEMES[t]
     if (this.hourTextWidget) {
-      this.hourTextWidget.setProperty(hmUI.prop.COLOR, theme.line)
+      this.hourTextWidget.setProperty(hmUI.prop.MORE, {
+        font_array: [
+          'font_hour_' + t + '/0.png', 'font_hour_' + t + '/1.png', 'font_hour_' + t + '/2.png', 'font_hour_' + t + '/3.png', 'font_hour_' + t + '/4.png',
+          'font_hour_' + t + '/5.png', 'font_hour_' + t + '/6.png', 'font_hour_' + t + '/7.png', 'font_hour_' + t + '/8.png', 'font_hour_' + t + '/9.png'
+        ]
+      })
     }
     if (this.minuteTextWidget) {
-      this.minuteTextWidget.setProperty(hmUI.prop.COLOR, theme.minute)
+      this.minuteTextWidget.setProperty(hmUI.prop.MORE, {
+        font_array: [
+          'font_minute_' + t + '/0.png', 'font_minute_' + t + '/1.png', 'font_minute_' + t + '/2.png', 'font_minute_' + t + '/3.png', 'font_minute_' + t + '/4.png',
+          'font_minute_' + t + '/5.png', 'font_minute_' + t + '/6.png', 'font_minute_' + t + '/7.png', 'font_minute_' + t + '/8.png', 'font_minute_' + t + '/9.png'
+        ]
+      })
     }
     if (this.centerLineWidget) {
       this.centerLineWidget.setProperty(hmUI.prop.MORE, {

@@ -64,7 +64,7 @@ WatchFace({
     })
 
 
-    // Background Image Pattern (Scaled & Positioned)
+    // Background Image Pattern
     hmUI.createWidget(hmUI.widget.IMG, {
       x: 0,
       y: 0,
@@ -74,31 +74,31 @@ WatchFace({
       src: 'bg_maze.png'
     })
     
-    // Hour Widget
-    this.hourTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
+    // Hour Widget (TEXT_IMG)
+    this.hourTextWidget = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
       x: 40,
       y: 148,
       w: 180,
       h: 130,
-      text_size: 96,
-      color: 0x000000,
-      align_h: hmUI.align.CENTER_H,
-      align_v: hmUI.align.CENTER_V,
-      font: 'fonts/Outfit-ExtraBold.ttf',
+      font_array: [
+      'font_hour_${this.currentThemeIndex}/0.png', 'font_hour_${this.currentThemeIndex}/1.png', 'font_hour_${this.currentThemeIndex}/2.png', 'font_hour_${this.currentThemeIndex}/3.png', 'font_hour_${this.currentThemeIndex}/4.png',
+      'font_hour_${this.currentThemeIndex}/5.png', 'font_hour_${this.currentThemeIndex}/6.png', 'font_hour_${this.currentThemeIndex}/7.png', 'font_hour_${this.currentThemeIndex}/8.png', 'font_hour_${this.currentThemeIndex}/9.png'
+    ],
+      h_space: 2,
       text: '00'
     })
       
-    // Minute Widget
-    this.minuteTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
+    // Minute Widget (TEXT_IMG)
+    this.minuteTextWidget = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
       x: 244,
       y: 148,
       w: 180,
       h: 130,
-      text_size: 96,
-      color: 0x000000,
-      align_h: hmUI.align.CENTER_H,
-      align_v: hmUI.align.CENTER_V,
-      font: 'fonts/Outfit-ExtraBold.ttf',
+      font_array: [
+      'font_minute_${this.currentThemeIndex}/0.png', 'font_minute_${this.currentThemeIndex}/1.png', 'font_minute_${this.currentThemeIndex}/2.png', 'font_minute_${this.currentThemeIndex}/3.png', 'font_minute_${this.currentThemeIndex}/4.png',
+      'font_minute_${this.currentThemeIndex}/5.png', 'font_minute_${this.currentThemeIndex}/6.png', 'font_minute_${this.currentThemeIndex}/7.png', 'font_minute_${this.currentThemeIndex}/8.png', 'font_minute_${this.currentThemeIndex}/9.png'
+    ],
+      h_space: 2,
       text: '00'
     })
       
@@ -125,7 +125,7 @@ WatchFace({
       this.cycleTheme()
     })
       
-    // Battery Complication
+    // Battery Complication (TEXT_IMG)
     
     
     hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 115, y: 305, w: 24, h: 14, radius: 2, color: 0x4a4e5d })
@@ -133,16 +133,16 @@ WatchFace({
     hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 139, y: 309, w: 2, h: 6, color: 0x4a4e5d })
     this.batteryFillWidget = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 118, y: 308, w: 18, h: 8, color: 0x8a90a6 })
         
-    this.batteryTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
+    this.batteryTextWidget = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
       x: 145,
       y: 297,
       w: 70,
       h: 30,
-      text_size: 22,
-      color: 0x8a90a6,
-      align_h: hmUI.align.LEFT,
-      align_v: hmUI.align.CENTER_V,
-      font: 'fonts/Outfit-ExtraBold.ttf',
+      font_array: [
+      'font_battery_${this.currentThemeIndex}/0.png', 'font_battery_${this.currentThemeIndex}/1.png', 'font_battery_${this.currentThemeIndex}/2.png', 'font_battery_${this.currentThemeIndex}/3.png', 'font_battery_${this.currentThemeIndex}/4.png',
+      'font_battery_${this.currentThemeIndex}/5.png', 'font_battery_${this.currentThemeIndex}/6.png', 'font_battery_${this.currentThemeIndex}/7.png', 'font_battery_${this.currentThemeIndex}/8.png', 'font_battery_${this.currentThemeIndex}/9.png'
+    ],
+      h_space: 1,
       text: ''
     })
     
@@ -157,38 +157,31 @@ WatchFace({
     })
       
       
-    // Weekday Widget (Centered)
-    this.weekdayTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
+    // Weekday Widget (IMG)
+    this.weekdayTextWidget = hmUI.createWidget(hmUI.widget.IMG, {
       x: 115,
       y: 326,
-      w: 100,
-      h: 25,
-      text_size: 16,
-      color: 0x8a90a6,
-      align_h: hmUI.align.CENTER_H,
-      align_v: hmUI.align.CENTER_V,
-      font: 'fonts/Outfit-ExtraBold.ttf',
-      text: ''
+      src: 'font_weekday_${this.currentThemeIndex}/week_1.png'
     })
     
       
-    // Steps Complication
+    // Steps Complication (TEXT_IMG)
     
     
     this.stepsBar1 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 239, y: 315, w: Math.round(5 * scale), h: Math.round(4 * scale), color: 0x000000 })
     this.stepsBar2 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 246, y: 310, w: Math.round(5 * scale), h: Math.round(9 * scale), color: 0x000000 })
     this.stepsBar3 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 253, y: 305, w: Math.round(5 * scale), h: Math.round(14 * scale), color: 0x000000 })
         
-    this.stepsTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
+    this.stepsTextWidget = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
       x: 269,
       y: 297,
       w: 74,
       h: 30,
-      text_size: 22,
-      color: 0x000000,
-      align_h: hmUI.align.LEFT,
-      align_v: hmUI.align.CENTER_V,
-      font: 'fonts/Outfit-ExtraBold.ttf',
+      font_array: [
+      'font_step_${this.currentThemeIndex}/0.png', 'font_step_${this.currentThemeIndex}/1.png', 'font_step_${this.currentThemeIndex}/2.png', 'font_step_${this.currentThemeIndex}/3.png', 'font_step_${this.currentThemeIndex}/4.png',
+      'font_step_${this.currentThemeIndex}/5.png', 'font_step_${this.currentThemeIndex}/6.png', 'font_step_${this.currentThemeIndex}/7.png', 'font_step_${this.currentThemeIndex}/8.png', 'font_step_${this.currentThemeIndex}/9.png'
+    ],
+      h_space: 1,
       text: ''
     })
     
@@ -203,18 +196,22 @@ WatchFace({
     })
       
       
-    // Date Widget (Centered)
-    this.monthDayTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
+    // Date Widget (Month IMG + Day TEXT_IMG)
+    this.monthWidget = hmUI.createWidget(hmUI.widget.IMG, {
       x: 239,
       y: 326,
-      w: 100,
-      h: 25,
-      text_size: 16,
-      color: 0x8a90a6,
-      align_h: hmUI.align.CENTER_H,
-      align_v: hmUI.align.CENTER_V,
-      font: 'fonts/Outfit-ExtraBold.ttf',
-      text: ''
+      src: 'font_month_${this.currentThemeIndex}/month_1.png'
+    })
+
+    this.dayWidget = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
+      x: 273,
+      y: 326,
+      font_array: [
+      'font_date_num_${this.currentThemeIndex}/0.png', 'font_date_num_${this.currentThemeIndex}/1.png', 'font_date_num_${this.currentThemeIndex}/2.png', 'font_date_num_${this.currentThemeIndex}/3.png', 'font_date_num_${this.currentThemeIndex}/4.png',
+      'font_date_num_${this.currentThemeIndex}/5.png', 'font_date_num_${this.currentThemeIndex}/6.png', 'font_date_num_${this.currentThemeIndex}/7.png', 'font_date_num_${this.currentThemeIndex}/8.png', 'font_date_num_${this.currentThemeIndex}/9.png'
+    ],
+      h_space: 1,
+      text: '01'
     })
     
       
@@ -269,24 +266,59 @@ WatchFace({
   },
 
   applyThemeColors() {
-    const theme = THEMES[this.currentThemeIndex]
+    const t = this.currentThemeIndex
+    const theme = THEMES[t]
     
-    if (this.hourTextWidget) this.hourTextWidget.setProperty(hmUI.prop.COLOR, theme.line)
-    if (this.minuteTextWidget) this.minuteTextWidget.setProperty(hmUI.prop.COLOR, theme.minute)
+    if (this.hourTextWidget) this.hourTextWidget.setProperty(hmUI.prop.MORE, {
+      font_array: [
+        'font_hour_${t}/0.png', 'font_hour_${t}/1.png', 'font_hour_${t}/2.png', 'font_hour_${t}/3.png', 'font_hour_${t}/4.png',
+        'font_hour_${t}/5.png', 'font_hour_${t}/6.png', 'font_hour_${t}/7.png', 'font_hour_${t}/8.png', 'font_hour_${t}/9.png'
+      ]
+    })
+    if (this.minuteTextWidget) this.minuteTextWidget.setProperty(hmUI.prop.MORE, {
+      font_array: [
+        'font_minute_${t}/0.png', 'font_minute_${t}/1.png', 'font_minute_${t}/2.png', 'font_minute_${t}/3.png', 'font_minute_${t}/4.png',
+        'font_minute_${t}/5.png', 'font_minute_${t}/6.png', 'font_minute_${t}/7.png', 'font_minute_${t}/8.png', 'font_minute_${t}/9.png'
+      ]
+    })
     if (this.centerLineWidget) {
       this.centerLineWidget.setProperty(hmUI.prop.MORE, {
         color: theme.line
       })
     }
-    if (this.batteryTextWidget) this.batteryTextWidget.setProperty(hmUI.prop.COLOR, 0x8a90a6)
-    if (this.weekdayTextWidget) this.weekdayTextWidget.setProperty(hmUI.prop.COLOR, 0x8a90a6)
+    if (this.batteryTextWidget) this.batteryTextWidget.setProperty(hmUI.prop.MORE, {
+      font_array: [
+        'font_battery_${t}/0.png', 'font_battery_${t}/1.png', 'font_battery_${t}/2.png', 'font_battery_${t}/3.png', 'font_battery_${t}/4.png',
+        'font_battery_${t}/5.png', 'font_battery_${t}/6.png', 'font_battery_${t}/7.png', 'font_battery_${t}/8.png', 'font_battery_${t}/9.png'
+      ]
+    })
+    if (this.weekdayTextWidget) {
+      const weekIndex = this.timeSensor.week
+      this.weekdayTextWidget.setProperty(hmUI.prop.SRC, 'font_weekday_' + t + '/week_' + weekIndex + '.png')
+    }
     if (this.stepsTextWidget) {
-      this.stepsTextWidget.setProperty(hmUI.prop.COLOR, theme.steps)
+      this.stepsTextWidget.setProperty(hmUI.prop.MORE, {
+        font_array: [
+          'font_step_${t}/0.png', 'font_step_${t}/1.png', 'font_step_${t}/2.png', 'font_step_${t}/3.png', 'font_step_${t}/4.png',
+          'font_step_${t}/5.png', 'font_step_${t}/6.png', 'font_step_${t}/7.png', 'font_step_${t}/8.png', 'font_step_${t}/9.png'
+        ]
+      })
       this.stepsBar1.setProperty(hmUI.prop.COLOR, theme.line)
       this.stepsBar2.setProperty(hmUI.prop.COLOR, theme.line)
       this.stepsBar3.setProperty(hmUI.prop.COLOR, theme.line)
     }
-    if (this.monthDayTextWidget) this.monthDayTextWidget.setProperty(hmUI.prop.COLOR, 0x8a90a6)
+    if (this.monthWidget) {
+      const monthIndex = this.timeSensor.month
+      this.monthWidget.setProperty(hmUI.prop.SRC, 'font_month_' + t + '/month_' + monthIndex + '.png')
+    }
+    if (this.dayWidget) {
+      this.dayWidget.setProperty(hmUI.prop.MORE, {
+        font_array: [
+          'font_date_num_${t}/0.png', 'font_date_num_${t}/1.png', 'font_date_num_${t}/2.png', 'font_date_num_${t}/3.png', 'font_date_num_${t}/4.png',
+          'font_date_num_${t}/5.png', 'font_date_num_${t}/6.png', 'font_date_num_${t}/7.png', 'font_date_num_${t}/8.png', 'font_date_num_${t}/9.png'
+        ]
+      })
+    }
 
     this.updateBattery()
   },
@@ -305,28 +337,27 @@ WatchFace({
       this.minuteTextWidget.setProperty(hmUI.prop.TEXT, mm)
     }
 
-    const WEEK_DAYS = ['', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
-    const MONTH_NAMES = ['', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+    const weekIndex = this.timeSensor.week
+    if (this.weekdayTextWidget) {
+      const t = this.currentThemeIndex
+      this.weekdayTextWidget.setProperty(hmUI.prop.SRC, 'font_weekday_' + t + '/week_' + weekIndex + '.png')
+    }
 
     const day = this.timeSensor.day
     const monthIndex = this.timeSensor.month
-    const weekIndex = this.timeSensor.week
-
-    const monthStr = MONTH_NAMES[monthIndex] || ''
-    const weekStr = WEEK_DAYS[weekIndex] || ''
-
-    if (this.weekdayTextWidget) {
-      this.weekdayTextWidget.setProperty(hmUI.prop.TEXT, weekStr)
+    if (this.monthWidget) {
+      const t = this.currentThemeIndex
+      this.monthWidget.setProperty(hmUI.prop.SRC, 'font_month_' + t + '/month_' + monthIndex + '.png')
     }
-    if (this.monthDayTextWidget) {
-      this.monthDayTextWidget.setProperty(hmUI.prop.TEXT, `${monthStr} ${day}`)
+    if (this.dayWidget) {
+      this.dayWidget.setProperty(hmUI.prop.TEXT, day < 10 ? '0' + day : '' + day)
     }
   },
 
   updateBattery() {
     if (!this.batteryTextWidget) return
     const batteryVal = this.batterySensor.current
-    this.batteryTextWidget.setProperty(hmUI.prop.TEXT, `${batteryVal}%`)
+    this.batteryTextWidget.setProperty(hmUI.prop.TEXT, batteryVal.toString())
 
     // Update battery fill color and width
     const w_charge = Math.round(18 * (batteryVal / 100))
@@ -348,8 +379,7 @@ WatchFace({
   updateSteps() {
     if (!this.stepsTextWidget) return
     const stepsVal = this.stepSensor.current
-    const formattedSteps = stepsVal.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-    this.stepsTextWidget.setProperty(hmUI.prop.TEXT, formattedSteps)
+    this.stepsTextWidget.setProperty(hmUI.prop.TEXT, stepsVal.toString())
     
   },
   onDestroy() {

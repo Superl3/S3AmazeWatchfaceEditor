@@ -303,9 +303,12 @@ app.post('/api/build', (req, res) => {
         return;
       }
       
-      if (attempts >= 50) { // 10 seconds timeout
+      if (attempts >= 150) { // 30 seconds timeout
         clearInterval(checkInterval);
-        return res.status(500).json({ error: 'Timeout waiting for QR code generation' });
+        return res.status(500).json({ 
+          error: 'Timeout waiting for QR code generation', 
+          details: 'The compile process took longer than 30 seconds due to PNG asset conversion. Please click compile again; the assets are now cached and it will finish immediately.' 
+        });
       }
     }, 200);
   });
