@@ -37,6 +37,7 @@ WatchFace({
     this.timeSensor = hmSensor.createSensor(hmSensor.id.TIME)
     this.batterySensor = hmSensor.createSensor(hmSensor.id.BATTERY)
     this.stepSensor = hmSensor.createSensor(hmSensor.id.STEP)
+    this.heartSensor = hmSensor.createSensor(hmSensor.id.HEART)
 
     this.currentThemeIndex = 1
     try {
@@ -74,34 +75,40 @@ WatchFace({
       src: 'bg_maze.png'
     })
     
-    // Hour Widget (TEXT_IMG)
-    this.hourTextWidget = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
-      x: 40,
-      y: 148,
-      w: 180,
-      h: 130,
-      font_array: [
-      'font_hour_${this.currentThemeIndex}/0.png', 'font_hour_${this.currentThemeIndex}/1.png', 'font_hour_${this.currentThemeIndex}/2.png', 'font_hour_${this.currentThemeIndex}/3.png', 'font_hour_${this.currentThemeIndex}/4.png',
-      'font_hour_${this.currentThemeIndex}/5.png', 'font_hour_${this.currentThemeIndex}/6.png', 'font_hour_${this.currentThemeIndex}/7.png', 'font_hour_${this.currentThemeIndex}/8.png', 'font_hour_${this.currentThemeIndex}/9.png'
-    ],
-      h_space: 2,
-      text: '00'
-    })
-      
-    // Minute Widget (TEXT_IMG)
-    this.minuteTextWidget = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
-      x: 244,
-      y: 148,
-      w: 180,
-      h: 130,
-      font_array: [
-      'font_minute_${this.currentThemeIndex}/0.png', 'font_minute_${this.currentThemeIndex}/1.png', 'font_minute_${this.currentThemeIndex}/2.png', 'font_minute_${this.currentThemeIndex}/3.png', 'font_minute_${this.currentThemeIndex}/4.png',
-      'font_minute_${this.currentThemeIndex}/5.png', 'font_minute_${this.currentThemeIndex}/6.png', 'font_minute_${this.currentThemeIndex}/7.png', 'font_minute_${this.currentThemeIndex}/8.png', 'font_minute_${this.currentThemeIndex}/9.png'
-    ],
-      h_space: 2,
-      text: '00'
-    })
-      
+    // Hour Widgets (one per theme)
+    this.hourTextWidgets = []
+    for (let i = 0; i < THEMES.length; i++) {
+      this.hourTextWidgets.push(hmUI.createWidget(hmUI.widget.TEXT_IMG, {
+        x: 40,
+        y: 148,
+        w: 180,
+        h: 130,
+        font_array: [
+        'h_' + i + '_0.png', 'h_' + i + '_1.png', 'h_' + i + '_2.png', 'h_' + i + '_3.png', 'h_' + i + '_4.png',
+        'h_' + i + '_5.png', 'h_' + i + '_6.png', 'h_' + i + '_7.png', 'h_' + i + '_8.png', 'h_' + i + '_9.png'
+      ],
+        h_space: 2,
+        text: '00'
+      }))
+    }
+        
+    // Minute Widgets (one per theme)
+    this.minuteTextWidgets = []
+    for (let i = 0; i < THEMES.length; i++) {
+      this.minuteTextWidgets.push(hmUI.createWidget(hmUI.widget.TEXT_IMG, {
+        x: 244,
+        y: 148,
+        w: 180,
+        h: 130,
+        font_array: [
+        'm_' + i + '_0.png', 'm_' + i + '_1.png', 'm_' + i + '_2.png', 'm_' + i + '_3.png', 'm_' + i + '_4.png',
+        'm_' + i + '_5.png', 'm_' + i + '_6.png', 'm_' + i + '_7.png', 'm_' + i + '_8.png', 'm_' + i + '_9.png'
+      ],
+        h_space: 2,
+        text: '00'
+      }))
+    }
+        
     // Divider Accent Line
     const activeTheme = THEMES[this.currentThemeIndex]
     this.centerLineWidget = hmUI.createWidget(hmUI.widget.FILL_RECT, {
@@ -125,65 +132,104 @@ WatchFace({
       this.cycleTheme()
     })
       
-    // Battery Complication (TEXT_IMG)
+    // Battery Complication (one per theme)
     
     
-    hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 115, y: 305, w: 24, h: 14, radius: 2, color: 0x4a4e5d })
-    hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 116, y: 306, w: 22, h: 12, radius: 1, color: 0x000000 })
-    hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 139, y: 309, w: 2, h: 6, color: 0x4a4e5d })
-    this.batteryFillWidget = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 118, y: 308, w: 18, h: 8, color: 0x8a90a6 })
-        
-    this.batteryTextWidget = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
-      x: 145,
-      y: 297,
-      w: 70,
-      h: 30,
-      font_array: [
-      'font_battery_${this.currentThemeIndex}/0.png', 'font_battery_${this.currentThemeIndex}/1.png', 'font_battery_${this.currentThemeIndex}/2.png', 'font_battery_${this.currentThemeIndex}/3.png', 'font_battery_${this.currentThemeIndex}/4.png',
-      'font_battery_${this.currentThemeIndex}/5.png', 'font_battery_${this.currentThemeIndex}/6.png', 'font_battery_${this.currentThemeIndex}/7.png', 'font_battery_${this.currentThemeIndex}/8.png', 'font_battery_${this.currentThemeIndex}/9.png'
-    ],
-      h_space: 1,
-      text: ''
-    })
+    this.batteryOutline = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 195, y: 20, w: 16, h: 10, radius: 1, color: 0x4a4e5d })
+    hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 196, y: 21, w: 14, h: 8, radius: 0, color: 0x000000 })
+    this.batteryTip = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 211, y: 23, w: 1, h: 4, color: 0x4a4e5d })
+    this.batteryFillWidget = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 197, y: 22, w: 12, h: 6, color: 0x8a90a6 })
+          
+    this.batteryTextWidgets = []
+    for (let i = 0; i < THEMES.length; i++) {
+      this.batteryTextWidgets.push(hmUI.createWidget(hmUI.widget.TEXT_IMG, {
+        x: 217,
+        y: 9,
+        w: 70,
+        h: 30,
+        font_array: [
+        'b_' + i + '_0.png', 'b_' + i + '_1.png', 'b_' + i + '_2.png', 'b_' + i + '_3.png', 'b_' + i + '_4.png',
+        'b_' + i + '_5.png', 'b_' + i + '_6.png', 'b_' + i + '_7.png', 'b_' + i + '_8.png', 'b_' + i + '_9.png'
+      ],
+        h_space: 1,
+        text: ''
+      }))
+    }
     
     // Shortcut Touch Area for BATTERY
     hmUI.createWidget(hmUI.widget.IMG_CLICK, {
-      x: 115,
-      y: 301,
+      x: 195,
+      y: 13,
       w: 100,
       h: 30,
       src: 'transparent.png',
       type: hmUI.data_type.BATTERY
     })
       
+        
+    // Heart Rate Complication (one per theme)
+    this.heartIconWidget = hmUI.createWidget(hmUI.widget.IMG, {
+      x: 115,
+      y: 301,
+      src: 'heart_' + this.currentThemeIndex + '.png'
+    })
+    this.heartTextWidgets = []
+    for (let i = 0; i < THEMES.length; i++) {
+      this.heartTextWidgets.push(hmUI.createWidget(hmUI.widget.TEXT_IMG, {
+        x: 145,
+        y: 297,
+        w: 74,
+        h: 30,
+        font_array: [
+        'hr_' + i + '_0.png', 'hr_' + i + '_1.png', 'hr_' + i + '_2.png', 'hr_' + i + '_3.png', 'hr_' + i + '_4.png',
+        'hr_' + i + '_5.png', 'hr_' + i + '_6.png', 'hr_' + i + '_7.png', 'hr_' + i + '_8.png', 'hr_' + i + '_9.png'
+      ],
+        h_space: 1,
+        text: ''
+      }))
+    }
+    
+    // Shortcut Touch Area for HEART
+    hmUI.createWidget(hmUI.widget.IMG_CLICK, {
+      x: 115,
+      y: 301,
+      w: 100,
+      h: 30,
+      src: 'transparent.png',
+      type: hmUI.data_type.HEART
+    })
       
+        
     // Weekday Widget (IMG)
     this.weekdayTextWidget = hmUI.createWidget(hmUI.widget.IMG, {
       x: 115,
       y: 326,
-      src: 'font_weekday_${this.currentThemeIndex}/week_1.png'
+      src: 'w_' + this.currentThemeIndex + '_week_1.png'
     })
     
       
-    // Steps Complication (TEXT_IMG)
+    // Steps Complication (one per theme)
     
-    
-    this.stepsBar1 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 239, y: 315, w: Math.round(5 * scale), h: Math.round(4 * scale), color: 0x000000 })
-    this.stepsBar2 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 246, y: 310, w: Math.round(5 * scale), h: Math.round(9 * scale), color: 0x000000 })
-    this.stepsBar3 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 253, y: 305, w: Math.round(5 * scale), h: Math.round(14 * scale), color: 0x000000 })
-        
-    this.stepsTextWidget = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
-      x: 269,
-      y: 297,
-      w: 74,
-      h: 30,
-      font_array: [
-      'font_step_${this.currentThemeIndex}/0.png', 'font_step_${this.currentThemeIndex}/1.png', 'font_step_${this.currentThemeIndex}/2.png', 'font_step_${this.currentThemeIndex}/3.png', 'font_step_${this.currentThemeIndex}/4.png',
-      'font_step_${this.currentThemeIndex}/5.png', 'font_step_${this.currentThemeIndex}/6.png', 'font_step_${this.currentThemeIndex}/7.png', 'font_step_${this.currentThemeIndex}/8.png', 'font_step_${this.currentThemeIndex}/9.png'
-    ],
-      h_space: 1,
-      text: ''
+    this.stepsIconWidget = hmUI.createWidget(hmUI.widget.IMG, {
+      x: 239,
+      y: 301,
+      src: 'step_' + this.currentThemeIndex + '.png'
     })
+    this.stepsTextWidgets = []
+    for (let i = 0; i < THEMES.length; i++) {
+      this.stepsTextWidgets.push(hmUI.createWidget(hmUI.widget.TEXT_IMG, {
+        x: 269,
+        y: 297,
+        w: 74,
+        h: 30,
+        font_array: [
+        's_' + i + '_0.png', 's_' + i + '_1.png', 's_' + i + '_2.png', 's_' + i + '_3.png', 's_' + i + '_4.png',
+        's_' + i + '_5.png', 's_' + i + '_6.png', 's_' + i + '_7.png', 's_' + i + '_8.png', 's_' + i + '_9.png'
+      ],
+        h_space: 1,
+        text: ''
+      }))
+    }
     
     // Shortcut Touch Area for STEP
     hmUI.createWidget(hmUI.widget.IMG_CLICK, {
@@ -195,29 +241,32 @@ WatchFace({
       type: hmUI.data_type.STEP
     })
       
-      
-    // Date Widget (Month IMG + Day TEXT_IMG)
+        
+    // Date Widget (one per theme)
     this.monthWidget = hmUI.createWidget(hmUI.widget.IMG, {
       x: 239,
       y: 326,
-      src: 'font_month_${this.currentThemeIndex}/month_1.png'
+      src: 'mon_' + this.currentThemeIndex + '_month_1.png'
     })
-
-    this.dayWidget = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
-      x: 273,
-      y: 326,
-      font_array: [
-      'font_date_num_${this.currentThemeIndex}/0.png', 'font_date_num_${this.currentThemeIndex}/1.png', 'font_date_num_${this.currentThemeIndex}/2.png', 'font_date_num_${this.currentThemeIndex}/3.png', 'font_date_num_${this.currentThemeIndex}/4.png',
-      'font_date_num_${this.currentThemeIndex}/5.png', 'font_date_num_${this.currentThemeIndex}/6.png', 'font_date_num_${this.currentThemeIndex}/7.png', 'font_date_num_${this.currentThemeIndex}/8.png', 'font_date_num_${this.currentThemeIndex}/9.png'
-    ],
-      h_space: 1,
-      text: '01'
-    })
+    this.dayWidgets = []
+    for (let i = 0; i < THEMES.length; i++) {
+      this.dayWidgets.push(hmUI.createWidget(hmUI.widget.TEXT_IMG, {
+        x: 273,
+        y: 326,
+        font_array: [
+        'dt_' + i + '_0.png', 'dt_' + i + '_1.png', 'dt_' + i + '_2.png', 'dt_' + i + '_3.png', 'dt_' + i + '_4.png',
+        'dt_' + i + '_5.png', 'dt_' + i + '_6.png', 'dt_' + i + '_7.png', 'dt_' + i + '_8.png', 'dt_' + i + '_9.png'
+      ],
+        h_space: 1,
+        text: '01'
+      }))
+    }
     
-      
+        
     this.applyThemeColors()
     this.updateTime()
         this.updateBattery()
+        this.updateHeart()
         this.updateSteps()
 
     this.setupListeners()
@@ -227,10 +276,12 @@ WatchFace({
     const updateTimeCb = () => this.updateTime()
     const updateBatteryCb = () => this.updateBattery()
     const updateStepsCb = () => this.updateSteps()
+    const updateHeartCb = () => this.updateHeart()
 
     // Register sensor change listeners
     this.batterySensor.addEventListener(hmSensor.event.CHANGE, updateBatteryCb)
     this.stepSensor.addEventListener(hmSensor.event.CHANGE, updateStepsCb)
+    this.heartSensor.addEventListener(hmSensor.event.CHANGE, updateHeartCb)
 
     this.timeTimer = timer.createTimer(0, 1000, updateTimeCb)
 
@@ -243,6 +294,7 @@ WatchFace({
         this.applyThemeColors()
         this.updateTime()
         this.updateBattery()
+        this.updateHeart()
         this.updateSteps()
       },
       pause_call: () => {
@@ -269,55 +321,38 @@ WatchFace({
     const t = this.currentThemeIndex
     const theme = THEMES[t]
     
-    if (this.hourTextWidget) this.hourTextWidget.setProperty(hmUI.prop.MORE, {
-      font_array: [
-        'font_hour_${t}/0.png', 'font_hour_${t}/1.png', 'font_hour_${t}/2.png', 'font_hour_${t}/3.png', 'font_hour_${t}/4.png',
-        'font_hour_${t}/5.png', 'font_hour_${t}/6.png', 'font_hour_${t}/7.png', 'font_hour_${t}/8.png', 'font_hour_${t}/9.png'
-      ]
-    })
-    if (this.minuteTextWidget) this.minuteTextWidget.setProperty(hmUI.prop.MORE, {
-      font_array: [
-        'font_minute_${t}/0.png', 'font_minute_${t}/1.png', 'font_minute_${t}/2.png', 'font_minute_${t}/3.png', 'font_minute_${t}/4.png',
-        'font_minute_${t}/5.png', 'font_minute_${t}/6.png', 'font_minute_${t}/7.png', 'font_minute_${t}/8.png', 'font_minute_${t}/9.png'
-      ]
-    })
-    if (this.centerLineWidget) {
+
+    for (let i = 0; i < THEMES.length; i++) {
+      const visible = (i === t)
+      if (this.hourTextWidgets && this.hourTextWidgets[i]) this.hourTextWidgets[i].setProperty(hmUI.prop.VISIBLE, visible)
+      if (this.minuteTextWidgets && this.minuteTextWidgets[i]) this.minuteTextWidgets[i].setProperty(hmUI.prop.VISIBLE, visible)
+      if (this.batteryTextWidgets && this.batteryTextWidgets[i]) this.batteryTextWidgets[i].setProperty(hmUI.prop.VISIBLE, visible)
+      if (this.stepsTextWidgets && this.stepsTextWidgets[i]) this.stepsTextWidgets[i].setProperty(hmUI.prop.VISIBLE, visible)
+      if (this.heartTextWidgets && this.heartTextWidgets[i]) this.heartTextWidgets[i].setProperty(hmUI.prop.VISIBLE, visible)
+      if (this.calTextWidgets && this.calTextWidgets[i]) this.calTextWidgets[i].setProperty(hmUI.prop.VISIBLE, visible)
+      if (this.distanceTextWidgets && this.distanceTextWidgets[i]) this.distanceTextWidgets[i].setProperty(hmUI.prop.VISIBLE, visible)
+      if (this.dayWidgets && this.dayWidgets[i]) this.dayWidgets[i].setProperty(hmUI.prop.VISIBLE, visible)
+    }
+      if (this.centerLineWidget) {
       this.centerLineWidget.setProperty(hmUI.prop.MORE, {
         color: theme.line
       })
     }
-    if (this.batteryTextWidget) this.batteryTextWidget.setProperty(hmUI.prop.MORE, {
-      font_array: [
-        'font_battery_${t}/0.png', 'font_battery_${t}/1.png', 'font_battery_${t}/2.png', 'font_battery_${t}/3.png', 'font_battery_${t}/4.png',
-        'font_battery_${t}/5.png', 'font_battery_${t}/6.png', 'font_battery_${t}/7.png', 'font_battery_${t}/8.png', 'font_battery_${t}/9.png'
-      ]
-    })
+    if (this.batteryOutline) this.batteryOutline.setProperty(hmUI.prop.COLOR, theme.line)
+    if (this.batteryTip) this.batteryTip.setProperty(hmUI.prop.COLOR, theme.line)
+    if (this.heartIconWidget) {
+      this.heartIconWidget.setProperty(hmUI.prop.SRC, 'heart_' + t + '.png')
+    }
     if (this.weekdayTextWidget) {
       const weekIndex = this.timeSensor.week
-      this.weekdayTextWidget.setProperty(hmUI.prop.SRC, 'font_weekday_' + t + '/week_' + weekIndex + '.png')
+      this.weekdayTextWidget.setProperty(hmUI.prop.SRC, 'w_' + t + '_week_' + weekIndex + '.png')
     }
-    if (this.stepsTextWidget) {
-      this.stepsTextWidget.setProperty(hmUI.prop.MORE, {
-        font_array: [
-          'font_step_${t}/0.png', 'font_step_${t}/1.png', 'font_step_${t}/2.png', 'font_step_${t}/3.png', 'font_step_${t}/4.png',
-          'font_step_${t}/5.png', 'font_step_${t}/6.png', 'font_step_${t}/7.png', 'font_step_${t}/8.png', 'font_step_${t}/9.png'
-        ]
-      })
-      this.stepsBar1.setProperty(hmUI.prop.COLOR, theme.line)
-      this.stepsBar2.setProperty(hmUI.prop.COLOR, theme.line)
-      this.stepsBar3.setProperty(hmUI.prop.COLOR, theme.line)
+    if (this.stepsIconWidget) {
+      this.stepsIconWidget.setProperty(hmUI.prop.SRC, 'step_' + t + '.png')
     }
     if (this.monthWidget) {
       const monthIndex = this.timeSensor.month
-      this.monthWidget.setProperty(hmUI.prop.SRC, 'font_month_' + t + '/month_' + monthIndex + '.png')
-    }
-    if (this.dayWidget) {
-      this.dayWidget.setProperty(hmUI.prop.MORE, {
-        font_array: [
-          'font_date_num_${t}/0.png', 'font_date_num_${t}/1.png', 'font_date_num_${t}/2.png', 'font_date_num_${t}/3.png', 'font_date_num_${t}/4.png',
-          'font_date_num_${t}/5.png', 'font_date_num_${t}/6.png', 'font_date_num_${t}/7.png', 'font_date_num_${t}/8.png', 'font_date_num_${t}/9.png'
-        ]
-      })
+      this.monthWidget.setProperty(hmUI.prop.SRC, 'mon_' + t + '_month_' + monthIndex + '.png')
     }
 
     this.updateBattery()
@@ -330,37 +365,47 @@ WatchFace({
     const hh = hour < 10 ? '0' + hour : '' + hour
     const mm = minute < 10 ? '0' + minute : '' + minute
 
-    if (this.hourTextWidget) {
-      this.hourTextWidget.setProperty(hmUI.prop.TEXT, hh)
+    if (this.hourTextWidgets) {
+      for (let i = 0; i < THEMES.length; i++) {
+        if (this.hourTextWidgets[i]) this.hourTextWidgets[i].setProperty(hmUI.prop.TEXT, hh)
+      }
     }
-    if (this.minuteTextWidget) {
-      this.minuteTextWidget.setProperty(hmUI.prop.TEXT, mm)
+    if (this.minuteTextWidgets) {
+      for (let i = 0; i < THEMES.length; i++) {
+        if (this.minuteTextWidgets[i]) this.minuteTextWidgets[i].setProperty(hmUI.prop.TEXT, mm)
+      }
     }
 
     const weekIndex = this.timeSensor.week
     if (this.weekdayTextWidget) {
       const t = this.currentThemeIndex
-      this.weekdayTextWidget.setProperty(hmUI.prop.SRC, 'font_weekday_' + t + '/week_' + weekIndex + '.png')
+      this.weekdayTextWidget.setProperty(hmUI.prop.SRC, 'w_' + t + '_week_' + weekIndex + '.png')
     }
 
     const day = this.timeSensor.day
     const monthIndex = this.timeSensor.month
     if (this.monthWidget) {
       const t = this.currentThemeIndex
-      this.monthWidget.setProperty(hmUI.prop.SRC, 'font_month_' + t + '/month_' + monthIndex + '.png')
+      this.monthWidget.setProperty(hmUI.prop.SRC, 'mon_' + t + '_month_' + monthIndex + '.png')
     }
-    if (this.dayWidget) {
-      this.dayWidget.setProperty(hmUI.prop.TEXT, day < 10 ? '0' + day : '' + day)
+    if (this.dayWidgets) {
+      const dd = day < 10 ? '0' + day : '' + day
+      for (let i = 0; i < THEMES.length; i++) {
+        if (this.dayWidgets[i]) this.dayWidgets[i].setProperty(hmUI.prop.TEXT, dd)
+      }
     }
   },
 
   updateBattery() {
-    if (!this.batteryTextWidget) return
+    if (!this.batteryTextWidgets) return
     const batteryVal = this.batterySensor.current
-    this.batteryTextWidget.setProperty(hmUI.prop.TEXT, batteryVal.toString())
+    for (let i = 0; i < THEMES.length; i++) {
+      if (this.batteryTextWidgets[i]) this.batteryTextWidgets[i].setProperty(hmUI.prop.TEXT, batteryVal.toString())
+    }
 
     // Update battery fill color and width
-    const w_charge = Math.round(18 * (batteryVal / 100))
+    const maxW = 12;
+    const w_charge = Math.max(1, Math.round(maxW * (batteryVal / 100)))
     let batteryColor = 0xeaf4ff
     if (batteryVal <= 20) {
       batteryColor = 0xff2c2c // Red
@@ -377,10 +422,20 @@ WatchFace({
     
   },
   updateSteps() {
-    if (!this.stepsTextWidget) return
+    if (!this.stepsTextWidgets) return
     const stepsVal = this.stepSensor.current
-    this.stepsTextWidget.setProperty(hmUI.prop.TEXT, stepsVal.toString())
+    for (let i = 0; i < THEMES.length; i++) {
+      if (this.stepsTextWidgets[i]) this.stepsTextWidgets[i].setProperty(hmUI.prop.TEXT, stepsVal.toString())
+    }
     
+  },
+  updateHeart() {
+    if (!this.heartTextWidgets) return
+    const hrVal = this.heartSensor.last || 0
+    const valStr = hrVal > 0 ? hrVal.toString() : '0'
+    for (let i = 0; i < THEMES.length; i++) {
+      if (this.heartTextWidgets[i]) this.heartTextWidgets[i].setProperty(hmUI.prop.TEXT, valStr)
+    }
   },
   onDestroy() {
     console.log('index page.js on destroy invoke')

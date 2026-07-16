@@ -898,19 +898,26 @@ function generateIndexJs(config) {
       `;
     }
 
-    const getFontArrayStr = (prefix, isCustom, widgetId) => {
-      const filePrefix = isCustom ? `font_custom_${widgetId}` : `${prefix}_\${this.currentThemeIndex}`;
-      return `[
-      '${filePrefix}_0.png', '${filePrefix}_1.png', '${filePrefix}_2.png', '${filePrefix}_3.png', '${filePrefix}_4.png',
-      '${filePrefix}_5.png', '${filePrefix}_6.png', '${filePrefix}_7.png', '${filePrefix}_8.png', '${filePrefix}_9.png'
-    ]`;
+    const getFontArrayStrForTheme = (prefix, isCustom, widgetId, themeVar) => {
+      if (isCustom) {
+        return `[
+        'font_custom_${widgetId}_0.png', 'font_custom_${widgetId}_1.png', 'font_custom_${widgetId}_2.png', 'font_custom_${widgetId}_3.png', 'font_custom_${widgetId}_4.png',
+        'font_custom_${widgetId}_5.png', 'font_custom_${widgetId}_6.png', 'font_custom_${widgetId}_7.png', 'font_custom_${widgetId}_8.png', 'font_custom_${widgetId}_9.png'
+      ]`;
+      } else {
+        return `[
+        '${prefix}_' + ${themeVar} + '_0.png', '${prefix}_' + ${themeVar} + '_1.png', '${prefix}_' + ${themeVar} + '_2.png', '${prefix}_' + ${themeVar} + '_3.png', '${prefix}_' + ${themeVar} + '_4.png',
+        '${prefix}_' + ${themeVar} + '_5.png', '${prefix}_' + ${themeVar} + '_6.png', '${prefix}_' + ${themeVar} + '_7.png', '${prefix}_' + ${themeVar} + '_8.png', '${prefix}_' + ${themeVar} + '_9.png'
+      ]`;
+      }
     };
 
     if (w.type === 'HOUR') {
-      const fontArr = getFontArrayStr('h', w.color === 'custom', w.id);
-      buildWidgets += `
-    // Hour Widget (TEXT_IMG)
-    this.hourTextWidget = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
+      if (w.color === 'custom') {
+        const fontArr = getFontArrayStrForTheme('h', true, w.id, '0');
+        buildWidgets += `
+    // Hour Widget (Custom Color)
+    const hourW = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
       x: ${w.x},
       y: ${w.y - 14},
       w: 180,
@@ -919,12 +926,31 @@ function generateIndexJs(config) {
       h_space: 2,
       text: '00'
     })
-      `;
+    this.hourTextWidgets = [hourW, hourW, hourW, hourW, hourW, hourW]
+        `;
+      } else {
+        buildWidgets += `
+    // Hour Widgets (one per theme)
+    this.hourTextWidgets = []
+    for (let i = 0; i < THEMES.length; i++) {
+      this.hourTextWidgets.push(hmUI.createWidget(hmUI.widget.TEXT_IMG, {
+        x: ${w.x},
+        y: ${w.y - 14},
+        w: 180,
+        h: 130,
+        font_array: ${getFontArrayStrForTheme('h', false, w.id, 'i')},
+        h_space: 2,
+        text: '00'
+      }))
+    }
+        `;
+      }
     } else if (w.type === 'MINUTE') {
-      const fontArr = getFontArrayStr('m', w.color === 'custom', w.id);
-      buildWidgets += `
-    // Minute Widget (TEXT_IMG)
-    this.minuteTextWidget = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
+      if (w.color === 'custom') {
+        const fontArr = getFontArrayStrForTheme('m', true, w.id, '0');
+        buildWidgets += `
+    // Minute Widget (Custom Color)
+    const minuteW = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
       x: ${w.x},
       y: ${w.y - 14},
       w: 180,
@@ -933,7 +959,25 @@ function generateIndexJs(config) {
       h_space: 2,
       text: '00'
     })
-      `;
+    this.minuteTextWidgets = [minuteW, minuteW, minuteW, minuteW, minuteW, minuteW]
+        `;
+      } else {
+        buildWidgets += `
+    // Minute Widgets (one per theme)
+    this.minuteTextWidgets = []
+    for (let i = 0; i < THEMES.length; i++) {
+      this.minuteTextWidgets.push(hmUI.createWidget(hmUI.widget.TEXT_IMG, {
+        x: ${w.x},
+        y: ${w.y - 14},
+        w: 180,
+        h: 130,
+        font_array: ${getFontArrayStrForTheme('m', false, w.id, 'i')},
+        h_space: 2,
+        text: '00'
+      }))
+    }
+        `;
+      }
     } else if (w.type === 'DIVIDER') {
       buildWidgets += `
     // Divider Accent Line
@@ -960,32 +1004,57 @@ function generateIndexJs(config) {
     })
       `;
     } else if (w.type === 'BATTERY') {
-      const scale = (w.iconSize || 24) / 24;
-      const textXOffset = w.showProgress ? 50 : Math.round(24 * scale) + 6;
+      const isSmall = w.iconSize <= 16;
+      const textXOffset = w.showProgress ? 50 : (isSmall ? 22 : 30);
       const textYOffset = w.showProgress ? -12 : -16;
-      const fontArr = getFontArrayStr('b', w.color === 'custom', w.id);
 
       let drawIconCode = '';
       if (w.iconStyle === '2') { // Vertical Battery
-        drawIconCode = `
-    this.batteryOutline = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x}, y: ${w.y - Math.round(12 * scale)}, w: ${Math.round(14 * scale)}, h: ${Math.round(24 * scale)}, radius: ${Math.round(2 * scale)}, color: 0x4a4e5d })
-    hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + 1}, y: ${w.y - Math.round(11 * scale)}, w: ${Math.round(12 * scale)}, h: ${Math.round(22 * scale)}, radius: ${Math.round(1 * scale)}, color: 0x000000 })
-    this.batteryTip = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + Math.round(4 * scale)}, y: ${w.y - Math.round(14 * scale)}, w: ${Math.round(6 * scale)}, h: ${Math.round(2 * scale)}, color: 0x4a4e5d })
-    this.batteryFillWidget = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + Math.round(3 * scale)}, y: ${w.y - Math.round(9 * scale)}, w: ${Math.round(8 * scale)}, h: ${Math.round(18 * scale)}, color: 0x8a90a6 })
-        `;
+        if (isSmall) {
+          drawIconCode = `
+    this.batteryOutline = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x}, y: ${w.y - 8}, w: 10, h: 16, radius: 1, color: 0x4a4e5d })
+    hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + 1}, y: ${w.y - 7}, w: 8, h: 14, radius: 0, color: 0x000000 })
+    this.batteryTip = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + 3}, y: ${w.y - 10}, w: 4, h: 2, color: 0x4a4e5d })
+    this.batteryFillWidget = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + 2}, y: ${w.y - 5}, w: 6, h: 10, color: 0x8a90a6 })
+          `;
+        } else {
+          drawIconCode = `
+    this.batteryOutline = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x}, y: ${w.y - 12}, w: 14, h: 24, radius: 2, color: 0x4a4e5d })
+    hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + 1}, y: ${w.y - 11}, w: 12, h: 22, radius: 1, color: 0x000000 })
+    this.batteryTip = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + 4}, y: ${w.y - 14}, w: 6, h: 2, color: 0x4a4e5d })
+    this.batteryFillWidget = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + 3}, y: ${w.y - 9}, w: 8, h: 18, color: 0x8a90a6 })
+          `;
+        }
       } else if (w.iconStyle === '3') { // Circle Bolt
-        drawIconCode = `
-    this.batteryOutline = hmUI.createWidget(hmUI.widget.ARC, { x: ${w.x}, y: ${w.y - Math.round(12 * scale)}, w: ${Math.round(24 * scale)}, h: ${Math.round(24 * scale)}, start_angle: 0, end_angle: 360, color: 0x4a4e5d, line_width: 2 })
+        if (isSmall) {
+          drawIconCode = `
+    this.batteryOutline = hmUI.createWidget(hmUI.widget.ARC, { x: ${w.x}, y: ${w.y - 8}, w: 16, h: 16, start_angle: 0, end_angle: 360, color: 0x4a4e5d, line_width: 2 })
     this.batteryTip = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x}, y: ${w.y}, w: 1, h: 1, color: 0x000000 }) // Dummy
-    this.batteryFillWidget = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + Math.round(10 * scale)}, y: ${w.y - Math.round(7 * scale)}, w: ${Math.round(4 * scale)}, h: ${Math.round(14 * scale)}, color: 0x8a90a6 })
-        `;
+    this.batteryFillWidget = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + 7}, y: ${w.y - 5}, w: 3, h: 10, color: 0x8a90a6 })
+          `;
+        } else {
+          drawIconCode = `
+    this.batteryOutline = hmUI.createWidget(hmUI.widget.ARC, { x: ${w.x}, y: ${w.y - 12}, w: 24, h: 24, start_angle: 0, end_angle: 360, color: 0x4a4e5d, line_width: 2 })
+    this.batteryTip = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x}, y: ${w.y}, w: 1, h: 1, color: 0x000000 }) // Dummy
+    this.batteryFillWidget = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + 10}, y: ${w.y - 7}, w: 4, h: 14, color: 0x8a90a6 })
+          `;
+        }
       } else { // Style 1: Horizontal Battery (Default)
-        drawIconCode = `
-    this.batteryOutline = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x}, y: ${w.y - Math.round(8 * scale)}, w: ${Math.round(24 * scale)}, h: ${Math.round(14 * scale)}, radius: ${Math.round(2 * scale)}, color: 0x4a4e5d })
-    hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + 1}, y: ${w.y - Math.round(7 * scale)}, w: ${Math.round(22 * scale)}, h: ${Math.round(12 * scale)}, radius: ${Math.round(1 * scale)}, color: 0x000000 })
-    this.batteryTip = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + Math.round(24 * scale)}, y: ${w.y - Math.round(4 * scale)}, w: ${Math.round(2 * scale)}, h: ${Math.round(6 * scale)}, color: 0x4a4e5d })
-    this.batteryFillWidget = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + Math.round(3 * scale)}, y: ${w.y - Math.round(5 * scale)}, w: ${Math.round(18 * scale)}, h: ${Math.round(8 * scale)}, color: 0x8a90a6 })
-        `;
+        if (isSmall) {
+          drawIconCode = `
+    this.batteryOutline = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x}, y: ${w.y - 5}, w: 16, h: 10, radius: 1, color: 0x4a4e5d })
+    hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + 1}, y: ${w.y - 4}, w: 14, h: 8, radius: 0, color: 0x000000 })
+    this.batteryTip = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + 16}, y: ${w.y - 2}, w: 1, h: 4, color: 0x4a4e5d })
+    this.batteryFillWidget = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + 2}, y: ${w.y - 3}, w: 12, h: 6, color: 0x8a90a6 })
+          `;
+        } else {
+          drawIconCode = `
+    this.batteryOutline = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x}, y: ${w.y - 8}, w: 24, h: 14, radius: 2, color: 0x4a4e5d })
+    hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + 1}, y: ${w.y - 7}, w: 22, h: 12, radius: 1, color: 0x000000 })
+    this.batteryTip = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + 24}, y: ${w.y - 4}, w: 2, h: 6, color: 0x4a4e5d })
+    this.batteryFillWidget = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + 3}, y: ${w.y - 5}, w: 18, h: 8, color: 0x8a90a6 })
+          `;
+        }
       }
 
       let drawProgressCode = '';
@@ -997,11 +1066,13 @@ function generateIndexJs(config) {
         `;
       }
 
-      buildWidgets += `
-    // Battery Complication (TEXT_IMG)
+      if (w.color === 'custom') {
+        const fontArr = getFontArrayStrForTheme('b', true, w.id, '0');
+        buildWidgets += `
+    // Battery Complication (Custom Color)
     ${drawProgressCode}
     ${drawIconCode}
-    this.batteryTextWidget = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
+    const batteryTextW = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
       x: ${w.x + textXOffset},
       y: ${w.y + textYOffset},
       w: 70,
@@ -1010,10 +1081,30 @@ function generateIndexJs(config) {
       h_space: 1,
       text: ''
     })
+    this.batteryTextWidgets = [batteryTextW, batteryTextW, batteryTextW, batteryTextW, batteryTextW, batteryTextW]
     ${shortcutWidget}
-      `;
+        `;
+      } else {
+        buildWidgets += `
+    // Battery Complication (one per theme)
+    ${drawProgressCode}
+    ${drawIconCode}
+    this.batteryTextWidgets = []
+    for (let i = 0; i < THEMES.length; i++) {
+      this.batteryTextWidgets.push(hmUI.createWidget(hmUI.widget.TEXT_IMG, {
+        x: ${w.x + textXOffset},
+        y: ${w.y + textYOffset},
+        w: 70,
+        h: 30,
+        font_array: ${getFontArrayStrForTheme('b', false, w.id, 'i')},
+        h_space: 1,
+        text: ''
+      }))
+    }
+    ${shortcutWidget}
+        `;
+      }
     } else if (w.type === 'STEP') {
-      const fontArr = getFontArrayStr('s', w.color === 'custom', w.id);
       let drawProgressCode = '';
       if (w.showProgress) {
         drawProgressCode = `
@@ -1023,16 +1114,17 @@ function generateIndexJs(config) {
         `;
       }
 
-      buildWidgets += `
-    // Steps Complication (PNG Icon + TEXT_IMG)
+      if (w.color === 'custom') {
+        const fontArr = getFontArrayStrForTheme('s', true, w.id, '0');
+        buildWidgets += `
+    // Steps Complication (Custom Color)
     ${drawProgressCode}
     this.stepsIconWidget = hmUI.createWidget(hmUI.widget.IMG, {
       x: ${w.x},
       y: ${w.y - 12},
       src: 'step_' + this.currentThemeIndex + '.png'
     })
-
-    this.stepsTextWidget = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
+    const stepsTextW = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
       x: ${w.x + 30},
       y: ${w.y - 16},
       w: 74,
@@ -1041,20 +1133,44 @@ function generateIndexJs(config) {
       h_space: 1,
       text: ''
     })
+    this.stepsTextWidgets = [stepsTextW, stepsTextW, stepsTextW, stepsTextW, stepsTextW, stepsTextW]
     ${shortcutWidget}
-      `;
+        `;
+      } else {
+        buildWidgets += `
+    // Steps Complication (one per theme)
+    ${drawProgressCode}
+    this.stepsIconWidget = hmUI.createWidget(hmUI.widget.IMG, {
+      x: ${w.x},
+      y: ${w.y - 12},
+      src: 'step_' + this.currentThemeIndex + '.png'
+    })
+    this.stepsTextWidgets = []
+    for (let i = 0; i < THEMES.length; i++) {
+      this.stepsTextWidgets.push(hmUI.createWidget(hmUI.widget.TEXT_IMG, {
+        x: ${w.x + 30},
+        y: ${w.y - 16},
+        w: 74,
+        h: 30,
+        font_array: ${getFontArrayStrForTheme('s', false, w.id, 'i')},
+        h_space: 1,
+        text: ''
+      }))
+    }
+    ${shortcutWidget}
+        `;
+      }
     } else if (w.type === 'HEART') {
-      const fontArr = getFontArrayStr('hr', w.color === 'custom', w.id);
-
-      buildWidgets += `
-    // Heart Rate Complication (PNG Icon + TEXT_IMG)
+      if (w.color === 'custom') {
+        const fontArr = getFontArrayStrForTheme('hr', true, w.id, '0');
+        buildWidgets += `
+    // Heart Rate Complication (Custom Color)
     this.heartIconWidget = hmUI.createWidget(hmUI.widget.IMG, {
       x: ${w.x},
       y: ${w.y - 12},
       src: 'heart_' + this.currentThemeIndex + '.png'
     })
-
-    this.heartTextWidget = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
+    const heartTextW = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
       x: ${w.x + 30},
       y: ${w.y - 16},
       w: 74,
@@ -1063,13 +1179,35 @@ function generateIndexJs(config) {
       h_space: 1,
       text: ''
     })
+    this.heartTextWidgets = [heartTextW, heartTextW, heartTextW, heartTextW, heartTextW, heartTextW]
     ${shortcutWidget}
-      `;
+        `;
+      } else {
+        buildWidgets += `
+    // Heart Rate Complication (one per theme)
+    this.heartIconWidget = hmUI.createWidget(hmUI.widget.IMG, {
+      x: ${w.x},
+      y: ${w.y - 12},
+      src: 'heart_' + this.currentThemeIndex + '.png'
+    })
+    this.heartTextWidgets = []
+    for (let i = 0; i < THEMES.length; i++) {
+      this.heartTextWidgets.push(hmUI.createWidget(hmUI.widget.TEXT_IMG, {
+        x: ${w.x + 30},
+        y: ${w.y - 16},
+        w: 74,
+        h: 30,
+        font_array: ${getFontArrayStrForTheme('hr', false, w.id, 'i')},
+        h_space: 1,
+        text: ''
+      }))
+    }
+    ${shortcutWidget}
+        `;
+      }
     } else if (w.type === 'CAL') {
       const scale = (w.iconSize || 24) / 24;
       const textXOffset = Math.round(24 * scale) + 6;
-      const fontArr = getFontArrayStr('c', w.color === 'custom', w.id);
-
       let drawIconCode = '';
       if (w.iconStyle === '2') { // Single Flame
         drawIconCode = `
@@ -1088,10 +1226,12 @@ function generateIndexJs(config) {
         `;
       }
 
-      buildWidgets += `
-    // Calories Complication (TEXT_IMG)
+      if (w.color === 'custom') {
+        const fontArr = getFontArrayStrForTheme('c', true, w.id, '0');
+        buildWidgets += `
+    // Calories Complication (Custom Color)
     ${drawIconCode}
-    this.calTextWidget = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
+    const calTextW = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
       x: ${w.x + textXOffset},
       y: ${w.y - 16},
       w: 74,
@@ -1100,13 +1240,31 @@ function generateIndexJs(config) {
       h_space: 1,
       text: ''
     })
+    this.calTextWidgets = [calTextW, calTextW, calTextW, calTextW, calTextW, calTextW]
     ${shortcutWidget}
-      `;
+        `;
+      } else {
+        buildWidgets += `
+    // Calories Complication (one per theme)
+    ${drawIconCode}
+    this.calTextWidgets = []
+    for (let i = 0; i < THEMES.length; i++) {
+      this.calTextWidgets.push(hmUI.createWidget(hmUI.widget.TEXT_IMG, {
+        x: ${w.x + textXOffset},
+        y: ${w.y - 16},
+        w: 74,
+        h: 30,
+        font_array: ${getFontArrayStrForTheme('c', false, w.id, 'i')},
+        h_space: 1,
+        text: ''
+      }))
+    }
+    ${shortcutWidget}
+        `;
+      }
     } else if (w.type === 'DISTANCE') {
       const scale = (w.iconSize || 24) / 24;
       const textXOffset = Math.round(24 * scale) + 6;
-      const fontArr = getFontArrayStr('d', w.color === 'custom', w.id);
-
       let drawIconCode = '';
       if (w.iconStyle === '2') { // Pin Alone
         drawIconCode = `
@@ -1125,10 +1283,12 @@ function generateIndexJs(config) {
         `;
       }
 
-      buildWidgets += `
-    // Distance Complication (TEXT_IMG)
+      if (w.color === 'custom') {
+        const fontArr = getFontArrayStrForTheme('d', true, w.id, '0');
+        buildWidgets += `
+    // Distance Complication (Custom Color)
     ${drawIconCode}
-    this.distanceTextWidget = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
+    const distTextW = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
       x: ${w.x + textXOffset},
       y: ${w.y - 16},
       w: 74,
@@ -1137,39 +1297,82 @@ function generateIndexJs(config) {
       h_space: 1,
       text: ''
     })
+    this.distanceTextWidgets = [distTextW, distTextW, distTextW, distTextW, distTextW, distTextW]
     ${shortcutWidget}
-      `;
+        `;
+      } else {
+        buildWidgets += `
+    // Distance Complication (one per theme)
+    ${drawIconCode}
+    this.distanceTextWidgets = []
+    for (let i = 0; i < THEMES.length; i++) {
+      this.distanceTextWidgets.push(hmUI.createWidget(hmUI.widget.TEXT_IMG, {
+        x: ${w.x + textXOffset},
+        y: ${w.y - 16},
+        w: 74,
+        h: 30,
+        font_array: ${getFontArrayStrForTheme('d', false, w.id, 'i')},
+        h_space: 1,
+        text: ''
+      }))
+    }
+    ${shortcutWidget}
+        `;
+      }
     } else if (w.type === 'WEEKDAY') {
-      const srcPrefix = w.color === 'custom' ? `font_custom_${w.id}` : `w_\${this.currentThemeIndex}`;
+      const srcExpr = w.color === 'custom' ? `'font_custom_${w.id}_week_1.png'` : `'w_' + this.currentThemeIndex + '_week_1.png'`;
       buildWidgets += `
     // Weekday Widget (IMG)
     this.weekdayTextWidget = hmUI.createWidget(hmUI.widget.IMG, {
       x: ${w.x},
       y: ${w.y - 12},
-      src: '${srcPrefix}_week_1.png'
+      src: ${srcExpr}
     })
     ${shortcutWidget}
       `;
     } else if (w.type === 'DATE') {
-      const monthPrefix = w.color === 'custom' ? `font_custom_${w.id}` : `mon_\${this.currentThemeIndex}`;
-      const fontArr = getFontArrayStr('dt', w.color === 'custom', w.id);
-      buildWidgets += `
-    // Date Widget (Month IMG + Day TEXT_IMG)
+      const srcExpr = w.color === 'custom' ? `'font_custom_${w.id}_month_1.png'` : `'mon_' + this.currentThemeIndex + '_month_1.png'`;
+      
+      if (w.color === 'custom') {
+        const fontArr = getFontArrayStrForTheme('dt', true, w.id, '0');
+        buildWidgets += `
+    // Date Widget (Custom Color)
     this.monthWidget = hmUI.createWidget(hmUI.widget.IMG, {
       x: ${w.x},
       y: ${w.y - 12},
-      src: '${monthPrefix}_month_1.png'
+      src: ${srcExpr}
     })
-
-    this.dayWidget = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
+    const dayW = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
       x: ${w.x + Math.round(w.size * 2.1)},
       y: ${w.y - 12},
       font_array: ${fontArr},
       h_space: 1,
       text: '01'
     })
+    this.dayWidgets = [dayW, dayW, dayW, dayW, dayW, dayW]
     ${shortcutWidget}
-      `;
+        `;
+      } else {
+        buildWidgets += `
+    // Date Widget (one per theme)
+    this.monthWidget = hmUI.createWidget(hmUI.widget.IMG, {
+      x: ${w.x},
+      y: ${w.y - 12},
+      src: ${srcExpr}
+    })
+    this.dayWidgets = []
+    for (let i = 0; i < THEMES.length; i++) {
+      this.dayWidgets.push(hmUI.createWidget(hmUI.widget.TEXT_IMG, {
+        x: ${w.x + Math.round(w.size * 2.1)},
+        y: ${w.y - 12},
+        font_array: ${getFontArrayStrForTheme('dt', false, w.id, 'i')},
+        h_space: 1,
+        text: '01'
+      }))
+    }
+    ${shortcutWidget}
+        `;
+      }
     }
   });
 
@@ -1226,12 +1429,15 @@ function generateIndexJs(config) {
 
     helperUpdateFunctions += `
   updateBattery() {
-    if (!this.batteryTextWidget) return
+    if (!this.batteryTextWidgets) return
     const batteryVal = this.batterySensor.current
-    this.batteryTextWidget.setProperty(hmUI.prop.TEXT, batteryVal.toString())
+    for (let i = 0; i < THEMES.length; i++) {
+      if (this.batteryTextWidgets[i]) this.batteryTextWidgets[i].setProperty(hmUI.prop.TEXT, batteryVal.toString())
+    }
 
     // Update battery fill color and width
-    const w_charge = Math.round(18 * (batteryVal / 100))
+    const maxW = ${(widgetsList.find(x => x.type === 'BATTERY') && widgetsList.find(x => x.type === 'BATTERY').iconSize <= 16) ? 12 : 18};
+    const w_charge = Math.max(1, Math.round(maxW * (batteryVal / 100)))
     let batteryColor = 0xeaf4ff
     if (batteryVal <= ${config.batteryLow}) {
       batteryColor = 0xff2c2c // Red
@@ -1263,9 +1469,11 @@ function generateIndexJs(config) {
 
     helperUpdateFunctions += `
   updateSteps() {
-    if (!this.stepsTextWidget) return
+    if (!this.stepsTextWidgets) return
     const stepsVal = this.stepSensor.current
-    this.stepsTextWidget.setProperty(hmUI.prop.TEXT, stepsVal.toString())
+    for (let i = 0; i < THEMES.length; i++) {
+      if (this.stepsTextWidgets[i]) this.stepsTextWidgets[i].setProperty(hmUI.prop.TEXT, stepsVal.toString())
+    }
     ${arcUpdateCode}
   },`;
   }
@@ -1273,134 +1481,93 @@ function generateIndexJs(config) {
   if (activeSensors.has('HEART')) {
     helperUpdateFunctions += `
   updateHeart() {
-    if (!this.heartTextWidget) return
+    if (!this.heartTextWidgets) return
     const hrVal = this.heartSensor.last || 0
-    this.heartTextWidget.setProperty(hmUI.prop.TEXT, hrVal > 0 ? hrVal.toString() : '0')
+    const valStr = hrVal > 0 ? hrVal.toString() : '0'
+    for (let i = 0; i < THEMES.length; i++) {
+      if (this.heartTextWidgets[i]) this.heartTextWidgets[i].setProperty(hmUI.prop.TEXT, valStr)
+    }
   },`;
   }
 
   if (activeSensors.has('CAL')) {
     helperUpdateFunctions += `
   updateCal() {
-    if (!this.calTextWidget) return
+    if (!this.calTextWidgets) return
     const calVal = this.calSensor.current || 0
-    this.calTextWidget.setProperty(hmUI.prop.TEXT, calVal.toString())
+    for (let i = 0; i < THEMES.length; i++) {
+      if (this.calTextWidgets[i]) this.calTextWidgets[i].setProperty(hmUI.prop.TEXT, calVal.toString())
+    }
   },`;
   }
 
   if (activeSensors.has('DISTANCE')) {
     helperUpdateFunctions += `
   updateDistance() {
-    if (!this.distanceTextWidget) return
+    if (!this.distanceTextWidgets) return
     const distVal = this.distanceSensor.current || 0
     const kmVal = Math.round(distVal / 1000)
-    this.distanceTextWidget.setProperty(hmUI.prop.TEXT, kmVal.toString())
+    for (let i = 0; i < THEMES.length; i++) {
+      if (this.distanceTextWidgets[i]) this.distanceTextWidgets[i].setProperty(hmUI.prop.TEXT, kmVal.toString())
+    }
   },`;
   }
 
-  let themeApplyColors = '';
+  let themeApplyColors = `
+    for (let i = 0; i < THEMES.length; i++) {
+      const visible = (i === t)
+      if (this.hourTextWidgets && this.hourTextWidgets[i]) this.hourTextWidgets[i].setProperty(hmUI.prop.VISIBLE, visible)
+      if (this.minuteTextWidgets && this.minuteTextWidgets[i]) this.minuteTextWidgets[i].setProperty(hmUI.prop.VISIBLE, visible)
+      if (this.batteryTextWidgets && this.batteryTextWidgets[i]) this.batteryTextWidgets[i].setProperty(hmUI.prop.VISIBLE, visible)
+      if (this.stepsTextWidgets && this.stepsTextWidgets[i]) this.stepsTextWidgets[i].setProperty(hmUI.prop.VISIBLE, visible)
+      if (this.heartTextWidgets && this.heartTextWidgets[i]) this.heartTextWidgets[i].setProperty(hmUI.prop.VISIBLE, visible)
+      if (this.calTextWidgets && this.calTextWidgets[i]) this.calTextWidgets[i].setProperty(hmUI.prop.VISIBLE, visible)
+      if (this.distanceTextWidgets && this.distanceTextWidgets[i]) this.distanceTextWidgets[i].setProperty(hmUI.prop.VISIBLE, visible)
+      if (this.dayWidgets && this.dayWidgets[i]) this.dayWidgets[i].setProperty(hmUI.prop.VISIBLE, visible)
+    }
+  `;
+
   widgetsList.forEach(w => {
     if (w.type === 'NONE') return;
 
-    const t = '${t}';
-    if (w.type === 'HOUR' && w.color !== 'custom') {
-      themeApplyColors += `    if (this.hourTextWidget) this.hourTextWidget.setProperty(hmUI.prop.MORE, {
-      font_array: [
-        'h_${t}_0.png', 'h_${t}_1.png', 'h_${t}_2.png', 'h_${t}_3.png', 'h_${t}_4.png',
-        'h_${t}_5.png', 'h_${t}_6.png', 'h_${t}_7.png', 'h_${t}_8.png', 'h_${t}_9.png'
-      ]
-    })\n`;
-    } else if (w.type === 'MINUTE' && w.color !== 'custom') {
-      themeApplyColors += `    if (this.minuteTextWidget) this.minuteTextWidget.setProperty(hmUI.prop.MORE, {
-      font_array: [
-        'm_${t}_0.png', 'm_${t}_1.png', 'm_${t}_2.png', 'm_${t}_3.png', 'm_${t}_4.png',
-        'm_${t}_5.png', 'm_${t}_6.png', 'm_${t}_7.png', 'm_${t}_8.png', 'm_${t}_9.png'
-      ]
-    })\n`;
-    } else if (w.type === 'DIVIDER') {
+    if (w.type === 'DIVIDER') {
       themeApplyColors += `    if (this.centerLineWidget) {
       this.centerLineWidget.setProperty(hmUI.prop.MORE, {
         color: theme.line
       })
     }\n`;
-    } else if (w.type === 'BATTERY' && w.color !== 'custom') {
-      themeApplyColors += `    if (this.batteryTextWidget) this.batteryTextWidget.setProperty(hmUI.prop.MORE, {
-      font_array: [
-        'b_\${t}_0.png', 'b_\${t}_1.png', 'b_\${t}_2.png', 'b_\${t}_3.png', 'b_\${t}_4.png',
-        'b_\${t}_5.png', 'b_\${t}_6.png', 'b_\${t}_7.png', 'b_\${t}_8.png', 'b_\${t}_9.png'
-      ]
-    })
-    if (this.batteryOutline) this.batteryOutline.setProperty(hmUI.prop.COLOR, theme.line)
+    } else if (w.type === 'BATTERY') {
+      themeApplyColors += `    if (this.batteryOutline) this.batteryOutline.setProperty(hmUI.prop.COLOR, theme.line)
     if (this.batteryTip) this.batteryTip.setProperty(hmUI.prop.COLOR, theme.line)\n`;
       if (w.showProgress) {
         themeApplyColors += "    if (this.batteryArcVal) this.batteryArcVal.setProperty(hmUI.prop.COLOR, theme.line)\n";
       }
-    } else if (w.type === 'STEP' && w.color !== 'custom') {
-      themeApplyColors += `    if (this.stepsTextWidget) {
-      this.stepsTextWidget.setProperty(hmUI.prop.MORE, {
-        font_array: [
-          's_\${t}_0.png', 's_\${t}_1.png', 's_\${t}_2.png', 's_\${t}_3.png', 's_\${t}_4.png',
-          's_\${t}_5.png', 's_\${t}_6.png', 's_\${t}_7.png', 's_\${t}_8.png', 's_\${t}_9.png'
-        ]
-      })
-    }
-    if (this.stepsIconWidget) {
+    } else if (w.type === 'STEP') {
+      themeApplyColors += `    if (this.stepsIconWidget) {
       this.stepsIconWidget.setProperty(hmUI.prop.SRC, 'step_' + t + '.png')
     }\n`;
       if (w.showProgress) {
         themeApplyColors += "    if (this.stepsArcVal) this.stepsArcVal.setProperty(hmUI.prop.COLOR, theme.line)\n";
       }
-    } else if (w.type === 'HEART' && w.color !== 'custom') {
-      themeApplyColors += `    if (this.heartTextWidget) {
-      this.heartTextWidget.setProperty(hmUI.prop.MORE, {
-        font_array: [
-          'hr_\${t}_0.png', 'hr_\${t}_1.png', 'hr_\${t}_2.png', 'hr_\${t}_3.png', 'hr_\${t}_4.png',
-          'hr_\${t}_5.png', 'hr_\${t}_6.png', 'hr_\${t}_7.png', 'hr_\${t}_8.png', 'hr_\${t}_9.png'
-        ]
-      })
-    }
-    if (this.heartIconWidget) {
+    } else if (w.type === 'HEART') {
+      themeApplyColors += `    if (this.heartIconWidget) {
       this.heartIconWidget.setProperty(hmUI.prop.SRC, 'heart_' + t + '.png')
     }\n`;
-    } else if (w.type === 'CAL' && w.color !== 'custom') {
-      themeApplyColors += `    if (this.calTextWidget) {
-      this.calTextWidget.setProperty(hmUI.prop.MORE, {
-        font_array: [
-          'c_${t}_0.png', 'c_${t}_1.png', 'c_${t}_2.png', 'c_${t}_3.png', 'c_${t}_4.png',
-          'c_${t}_5.png', 'c_${t}_6.png', 'c_${t}_7.png', 'c_${t}_8.png', 'c_${t}_9.png'
-        ]
-      })
-      this.calFlame1.setProperty(hmUI.prop.COLOR, theme.line)
-      this.calFlame2.setProperty(hmUI.prop.COLOR, theme.line)
-    }\n`;
-    } else if (w.type === 'DISTANCE' && w.color !== 'custom') {
-      themeApplyColors += `    if (this.distanceTextWidget) {
-      this.distanceTextWidget.setProperty(hmUI.prop.MORE, {
-        font_array: [
-          'd_${t}_0.png', 'd_${t}_1.png', 'd_${t}_2.png', 'd_${t}_3.png', 'd_${t}_4.png',
-          'd_${t}_5.png', 'd_${t}_6.png', 'd_${t}_7.png', 'd_${t}_8.png', 'd_${t}_9.png'
-        ]
-      })
-      this.distPinCircle.setProperty(hmUI.prop.COLOR, theme.line)
-      this.distPinLine.setProperty(hmUI.prop.COLOR, theme.line)
-    }\n`;
-    } else if (w.type === 'WEEKDAY' && w.color !== 'custom') {
+    } else if (w.type === 'CAL') {
+      themeApplyColors += `    if (this.calFlame1) this.calFlame1.setProperty(hmUI.prop.COLOR, theme.line)
+    if (this.calFlame2) this.calFlame2.setProperty(hmUI.prop.COLOR, theme.line)\n`;
+    } else if (w.type === 'DISTANCE') {
+      themeApplyColors += `    if (this.distPinCircle) this.distPinCircle.setProperty(hmUI.prop.COLOR, theme.line)
+    if (this.distPinLine) this.distPinLine.setProperty(hmUI.prop.COLOR, theme.line)\n`;
+    } else if (w.type === 'WEEKDAY') {
       themeApplyColors += `    if (this.weekdayTextWidget) {
       const weekIndex = this.timeSensor.week
       this.weekdayTextWidget.setProperty(hmUI.prop.SRC, 'w_' + t + '_week_' + weekIndex + '.png')
     }\n`;
-    } else if (w.type === 'DATE' && w.color !== 'custom') {
+    } else if (w.type === 'DATE') {
       themeApplyColors += `    if (this.monthWidget) {
       const monthIndex = this.timeSensor.month
       this.monthWidget.setProperty(hmUI.prop.SRC, 'mon_' + t + '_month_' + monthIndex + '.png')
-    }
-    if (this.dayWidget) {
-      this.dayWidget.setProperty(hmUI.prop.MORE, {
-        font_array: [
-          'dt_${t}_0.png', 'dt_${t}_1.png', 'dt_${t}_2.png', 'dt_${t}_3.png', 'dt_${t}_4.png',
-          'dt_${t}_5.png', 'dt_${t}_6.png', 'dt_${t}_7.png', 'dt_${t}_8.png', 'dt_${t}_9.png'
-        ]
-      })
     }\n`;
     }
   });
@@ -1536,11 +1703,15 @@ ${themeApplyColors}
     const hh = hour < 10 ? '0' + hour : '' + hour
     const mm = minute < 10 ? '0' + minute : '' + minute
 
-    if (this.hourTextWidget) {
-      this.hourTextWidget.setProperty(hmUI.prop.TEXT, hh)
+    if (this.hourTextWidgets) {
+      for (let i = 0; i < THEMES.length; i++) {
+        if (this.hourTextWidgets[i]) this.hourTextWidgets[i].setProperty(hmUI.prop.TEXT, hh)
+      }
     }
-    if (this.minuteTextWidget) {
-      this.minuteTextWidget.setProperty(hmUI.prop.TEXT, mm)
+    if (this.minuteTextWidgets) {
+      for (let i = 0; i < THEMES.length; i++) {
+        if (this.minuteTextWidgets[i]) this.minuteTextWidgets[i].setProperty(hmUI.prop.TEXT, mm)
+      }
     }
 
     const weekIndex = this.timeSensor.week
@@ -1555,8 +1726,11 @@ ${themeApplyColors}
       const t = this.currentThemeIndex
       this.monthWidget.setProperty(hmUI.prop.SRC, 'mon_' + t + '_month_' + monthIndex + '.png')
     }
-    if (this.dayWidget) {
-      this.dayWidget.setProperty(hmUI.prop.TEXT, day < 10 ? '0' + day : '' + day)
+    if (this.dayWidgets) {
+      const dd = day < 10 ? '0' + day : '' + day
+      for (let i = 0; i < THEMES.length; i++) {
+        if (this.dayWidgets[i]) this.dayWidgets[i].setProperty(hmUI.prop.TEXT, dd)
+      }
     }
   },
 ${helperUpdateFunctions}

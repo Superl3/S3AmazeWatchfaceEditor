@@ -69,8 +69,8 @@ WatchFace({
       w: 180,
       h: 130,
       font_array: [
-        'font_hour_undefined/0.png', 'font_hour_undefined/1.png', 'font_hour_undefined/2.png', 'font_hour_undefined/3.png', 'font_hour_undefined/4.png',
-        'font_hour_undefined/5.png', 'font_hour_undefined/6.png', 'font_hour_undefined/7.png', 'font_hour_undefined/8.png', 'font_hour_undefined/9.png'
+        'h_${this.currentThemeIndex}_0.png', 'h_${this.currentThemeIndex}_1.png', 'h_${this.currentThemeIndex}_2.png', 'h_${this.currentThemeIndex}_3.png', 'h_${this.currentThemeIndex}_4.png',
+        'h_${this.currentThemeIndex}_5.png', 'h_${this.currentThemeIndex}_6.png', 'h_${this.currentThemeIndex}_7.png', 'h_${this.currentThemeIndex}_8.png', 'h_${this.currentThemeIndex}_9.png'
       ],
       h_space: 2,
       text: '00'
@@ -83,8 +83,8 @@ WatchFace({
       w: 180,
       h: 130,
       font_array: [
-        'font_minute_undefined/0.png', 'font_minute_undefined/1.png', 'font_minute_undefined/2.png', 'font_minute_undefined/3.png', 'font_minute_undefined/4.png',
-        'font_minute_undefined/5.png', 'font_minute_undefined/6.png', 'font_minute_undefined/7.png', 'font_minute_undefined/8.png', 'font_minute_undefined/9.png'
+        'm_${this.currentThemeIndex}_0.png', 'm_${this.currentThemeIndex}_1.png', 'm_${this.currentThemeIndex}_2.png', 'm_${this.currentThemeIndex}_3.png', 'm_${this.currentThemeIndex}_4.png',
+        'm_${this.currentThemeIndex}_5.png', 'm_${this.currentThemeIndex}_6.png', 'm_${this.currentThemeIndex}_7.png', 'm_${this.currentThemeIndex}_8.png', 'm_${this.currentThemeIndex}_9.png'
       ],
       h_space: 2,
       text: '00'
@@ -132,16 +132,16 @@ WatchFace({
     if (this.hourTextWidget) {
       this.hourTextWidget.setProperty(hmUI.prop.MORE, {
         font_array: [
-          'font_hour_' + t + '/0.png', 'font_hour_' + t + '/1.png', 'font_hour_' + t + '/2.png', 'font_hour_' + t + '/3.png', 'font_hour_' + t + '/4.png',
-          'font_hour_' + t + '/5.png', 'font_hour_' + t + '/6.png', 'font_hour_' + t + '/7.png', 'font_hour_' + t + '/8.png', 'font_hour_' + t + '/9.png'
+          'h_' + t + '_0.png', 'h_' + t + '_1.png', 'h_' + t + '_2.png', 'h_' + t + '_3.png', 'h_' + t + '_4.png',
+          'h_' + t + '_5.png', 'h_' + t + '_6.png', 'h_' + t + '_7.png', 'h_' + t + '_8.png', 'h_' + t + '_9.png'
         ]
       })
     }
     if (this.minuteTextWidget) {
       this.minuteTextWidget.setProperty(hmUI.prop.MORE, {
         font_array: [
-          'font_minute_' + t + '/0.png', 'font_minute_' + t + '/1.png', 'font_minute_' + t + '/2.png', 'font_minute_' + t + '/3.png', 'font_minute_' + t + '/4.png',
-          'font_minute_' + t + '/5.png', 'font_minute_' + t + '/6.png', 'font_minute_' + t + '/7.png', 'font_minute_' + t + '/8.png', 'font_minute_' + t + '/9.png'
+          'm_' + t + '_0.png', 'm_' + t + '_1.png', 'm_' + t + '_2.png', 'm_' + t + '_3.png', 'm_' + t + '_4.png',
+          'm_' + t + '_5.png', 'm_' + t + '_6.png', 'm_' + t + '_7.png', 'm_' + t + '_8.png', 'm_' + t + '_9.png'
         ]
       })
     }
