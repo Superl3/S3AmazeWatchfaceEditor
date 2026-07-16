@@ -1,9 +1,11 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const { exec } = require('child_process');
+const { exec, spawn } = require('child_process');
 const Jimp = require('jimp');
 const https = require('https');
+
+let previewProcess = null;
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -47,10 +49,10 @@ const DEFAULT_CONFIG = {
 };
 
 const FONT_URLS = {
-  'Outfit': 'https://github.com/google/fonts/raw/main/ofl/outfit/static/Outfit-ExtraBold.ttf',
-  'Orbitron': 'https://github.com/google/fonts/raw/main/ofl/orbitron/static/Orbitron-Black.ttf',
-  'Share Tech Mono': 'https://github.com/google/fonts/raw/main/ofl/sharetechmono/ShareTechMono-Regular.ttf',
-  'JetBrains Mono': 'https://github.com/google/fonts/raw/main/ofl/jetbrainsmono/static/JetBrainsMono-ExtraBold.ttf'
+  'Outfit': 'https://cdn.jsdelivr.net/npm/@fontsource/outfit/files/outfit-latin-800-normal.ttf',
+  'Orbitron': 'https://cdn.jsdelivr.net/npm/@fontsource/orbitron/files/orbitron-latin-900-normal.ttf',
+  'Share Tech Mono': 'https://cdn.jsdelivr.net/npm/@fontsource/share-tech-mono/files/share-tech-mono-latin-400-normal.ttf',
+  'JetBrains Mono': 'https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-800-normal.ttf'
 };
 
 const FONT_FILENAMES = {
@@ -221,10 +223,23 @@ app.post('/api/save', async (req, res) => {
 app.post('/api/build', (req, res) => {
   const testWfDir = path.join(__dirname, 'test_wf');
   
-  if (fs.existsSync(QRCODE_PATH)) {
+  // Kill existing preview process if running
+  if (previewProcess) {
+    console.log('Killing existing zeus preview process...');
     try {
-      fs.unlinkSync(QRCODE_PATH);
+      previewProcess.kill();
     } catch (e) {}
+    previewProcess = null;
+  }
+
+  // Clear previous QR code images
+  const path1 = path.join(__dirname, 'test_wf', 'qrcode.png');
+  const path2 = path.join(__dirname, 'qrcode.png');
+  if (fs.existsSync(path1)) {
+    try { fs.unlinkSync(path1); } catch (e) {}
+  }
+  if (fs.existsSync(path2)) {
+    try { fs.unlinkSync(path2); } catch (e) {}
   }
 
   console.log('Compiling watchface...');
@@ -234,28 +249,51 @@ app.post('/api/build', (req, res) => {
       return res.status(500).json({ error: 'Zeus build failed', details: stdout || stderr });
     }
 
-    console.log('Generating QR code preview...');
-    exec('npx zeus preview', { cwd: testWfDir }, (previewErr, previewStdout, previewStderr) => {
-      let attempts = 0;
-      const checkInterval = setInterval(() => {
-        attempts++;
-        if (fs.existsSync(QRCODE_PATH)) {
-          clearInterval(checkInterval);
+    console.log('Spawning zeus preview process in background...');
+    previewProcess = spawn('npx', ['zeus', 'preview'], {
+      cwd: testWfDir,
+      shell: true
+    });
+
+    previewProcess.stdout.on('data', (data) => {
+      console.log(`[Preview stdout]: ${data}`);
+    });
+    previewProcess.stderr.on('data', (data) => {
+      console.log(`[Preview stderr]: ${data}`);
+    });
+
+    // Immediately start polling for the generated QR code, without waiting for the process to exit
+    let attempts = 0;
+    const checkInterval = setInterval(() => {
+      attempts++;
+      const p1 = path.join(__dirname, 'test_wf', 'qrcode.png');
+      const p2 = path.join(__dirname, 'qrcode.png');
+      let finalPath = null;
+      if (fs.existsSync(p1)) finalPath = p1;
+      else if (fs.existsSync(p2)) finalPath = p2;
+
+      if (finalPath) {
+        clearInterval(checkInterval);
+        console.log(`Successfully generated QR code at ${finalPath}`);
+        // Give 300ms for file write to complete
+        setTimeout(() => {
           try {
-            const qrImageBuffer = fs.readFileSync(QRCODE_PATH);
+            const qrImageBuffer = fs.readFileSync(finalPath);
             const qrBase64 = `data:image/png;base64,${qrImageBuffer.toString('base64')}`;
             return res.json({ success: true, qr: qrBase64 });
           } catch (readErr) {
+            console.error(readErr);
             return res.status(500).json({ error: 'Failed to read QR code image' });
           }
-        }
-        
-        if (attempts >= 25) { // 5 seconds timeout
-          clearInterval(checkInterval);
-          return res.status(500).json({ error: 'Timeout waiting for QR code generation' });
-        }
-      }, 200);
-    });
+        }, 300);
+        return;
+      }
+      
+      if (attempts >= 50) { // 10 seconds timeout
+        clearInterval(checkInterval);
+        return res.status(500).json({ error: 'Timeout waiting for QR code generation' });
+      }
+    }, 200);
   });
 });
 
@@ -322,10 +360,7 @@ async function generateThumbnail(config, destPath) {
     if (w.type === 'HOUR' || w.type === 'MINUTE') {
       const textImg = new Jimp(180, 130, 0x00000000);
       const useFont = w.size > 80 ? font64 : font32;
-      textImg.print(useFont, 0, 10, w.type === 'HOUR' ? '10' : '09', 180, 130, {
-        alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER,
-        alignmentY: Jimp.VERTICAL_ALIGN_MIDDLE
-      });
+      textImg.print(useFont, 40, 25, w.type === 'HOUR' ? '10' : '09');
       textImg.color([{ apply: 'mix', params: [colorHex, 100] }]);
       canvas.composite(textImg, w.x, w.y - 14);
     } 
