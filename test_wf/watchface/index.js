@@ -1,45 +1,48 @@
 const THEMES = [
   {
-    line: 0xff5a36,
-    minute: 0xeaf4ff,
-    steps: 0xff5a36
-  },
-  {
-    line: 0xff7b90,    // Strawberry Yogurt (Pantone Pastel Coral Pink)
-    minute: 0xfff0f2,  // Yogurt Cream Peach
+    line: 0xff7b90,
+    minute: 0xfff0f2,
     steps: 0xff7b90
   },
   {
-    line: 0x7cd1a1,    // Mint Pistachio (Pantone Mint Green)
-    minute: 0xf0faf4,  // Mint Milk
+    line: 0xff7b90,    // Strawberry Yogurt
+    minute: 0xfff0f2,
+    steps: 0xff7b90
+  },
+  {
+    line: 0x7cd1a1,    // Mint Pistachio
+    minute: 0xf0faf4,
     steps: 0x7cd1a1
   },
   {
-    line: 0x8f9eff,    // Blueberry Lavender (Pantone Serenity Blue)
-    minute: 0xf2f4ff,  // Yogurt Lavender Milk
+    line: 0x8f9eff,    // Blueberry Lavender
+    minute: 0xf2f4ff,
     steps: 0x8f9eff
   },
   {
-    line: 0xffd670,    // Banana Cream (Pantone Soft Yellow)
-    minute: 0xfffcf2,  // Warm Vanilla Cream
+    line: 0xffd670,    // Banana Cream
+    minute: 0xfffcf2,
     steps: 0xffd670
+  },
+  {
+    line: 0xff9e7d,    // Soft Peach Melba
+    minute: 0xfff5f2,
+    steps: 0xff9e7d
   }
 ]
 
 WatchFace({
   onInit() {
     console.log('index page.js on init invoke')
-    // Initialize sensors
     this.timeSensor = hmSensor.createSensor(hmSensor.id.TIME)
     this.batterySensor = hmSensor.createSensor(hmSensor.id.BATTERY)
     this.stepSensor = hmSensor.createSensor(hmSensor.id.STEP)
 
-    // Retrieve saved theme index
-    this.currentThemeIndex = 0
+    this.currentThemeIndex = 1
     try {
-      this.currentThemeIndex = hmFS.SysProGetInt('theme_idx') !== undefined ? hmFS.SysProGetInt('theme_idx') : 0
+      this.currentThemeIndex = hmFS.SysProGetInt('theme_idx') !== undefined ? hmFS.SysProGetInt('theme_idx') : 1
       if (this.currentThemeIndex < 0 || this.currentThemeIndex >= THEMES.length) {
-        this.currentThemeIndex = 0
+        this.currentThemeIndex = 1
       }
     } catch (e) {
       console.log('Read theme index failed', e)
@@ -49,7 +52,6 @@ WatchFace({
   build() {
     console.log('index page.js on build invoke')
 
-    // 1. Draw outer subtle ring (Centered: center_x=227, center_y=227)
     hmUI.createWidget(hmUI.widget.ARC, {
       x: 12,
       y: 12,
@@ -61,53 +63,53 @@ WatchFace({
       line_width: 1
     })
 
-    // 2. Dynamic Component Widgets
 
-    // Background Image Pattern (Scaled, Positioned, and Dimmed)
+    // Background Image Pattern (Scaled & Positioned)
     hmUI.createWidget(hmUI.widget.IMG, {
       x: 0,
       y: 0,
       w: 454,
       h: 454,
-      alpha: 128,
-      src: 'bg_carbon.png'
+      alpha: 102,
+      src: 'bg_maze.png'
     })
     
     // Hour Widget
     this.hourTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
       x: 40,
-      y: 162,
+      y: 148,
       w: 180,
       h: 130,
-      text_size: 112,
-      color: 0x000000, // Set by applyThemeColors()
+      text_size: 96,
+      color: 0x000000,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,
-      
+      font: 'fonts/Outfit-ExtraBold.ttf',
       text: '00'
     })
       
     // Minute Widget
     this.minuteTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
       x: 244,
-      y: 162,
+      y: 148,
       w: 180,
       h: 130,
-      text_size: 112,
-      color: 0x000000, // Set by applyThemeColors()
+      text_size: 96,
+      color: 0x000000,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,
-      
+      font: 'fonts/Outfit-ExtraBold.ttf',
       text: '00'
     })
       
     // Divider Accent Line
+    const activeTheme = THEMES[this.currentThemeIndex]
     this.centerLineWidget = hmUI.createWidget(hmUI.widget.FILL_RECT, {
       x: 226,
       y: 67,
       w: 2,
       h: 320,
-      color: 0x000000 // Set by applyThemeColors()
+      color: activeTheme.line
     })
 
     // Theme Switcher Hotspot
@@ -123,15 +125,14 @@ WatchFace({
       this.cycleTheme()
     })
       
-    // Battery Vector Icon (Outline)
+    // Battery Complication
+    
+    
     hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 115, y: 305, w: 24, h: 14, radius: 2, color: 0x4a4e5d })
     hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 116, y: 306, w: 22, h: 12, radius: 1, color: 0x000000 })
     hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 139, y: 309, w: 2, h: 6, color: 0x4a4e5d })
-    
-    // Battery Fill Bar (Dynamic)
     this.batteryFillWidget = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 118, y: 308, w: 18, h: 8, color: 0x8a90a6 })
-    
-    // Battery Text Widget
+        
     this.batteryTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
       x: 145,
       y: 297,
@@ -141,19 +142,20 @@ WatchFace({
       color: 0x8a90a6,
       align_h: hmUI.align.LEFT,
       align_v: hmUI.align.CENTER_V,
-      
+      font: 'fonts/Outfit-ExtraBold.ttf',
       text: ''
     })
     
-    // Shortcut
+    // Shortcut Touch Area for BATTERY
     hmUI.createWidget(hmUI.widget.IMG_CLICK, {
-      x: 110,
-      y: 293,
-      w: 105,
-      h: 40,
+      x: 115,
+      y: 301,
+      w: 100,
+      h: 30,
       src: 'transparent.png',
       type: hmUI.data_type.BATTERY
     })
+      
       
     // Weekday Widget (Centered)
     this.weekdayTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
@@ -165,18 +167,20 @@ WatchFace({
       color: 0x8a90a6,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,
-      
+      font: 'fonts/Outfit-ExtraBold.ttf',
       text: ''
     })
-      
-    // Steps Vector Icon (Staircase)
-    this.stepsBar1 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 239, y: 315, w: 5, h: 4, color: 0x000000 })
-    this.stepsBar2 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 246, y: 310, w: 5, h: 9, color: 0x000000 })
-    this.stepsBar3 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 253, y: 305, w: 5, h: 14, color: 0x000000 })
     
-    // Steps Text Widget
+      
+    // Steps Complication
+    
+    
+    this.stepsBar1 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 239, y: 315, w: Math.round(5 * scale), h: Math.round(4 * scale), color: 0x000000 })
+    this.stepsBar2 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 246, y: 310, w: Math.round(5 * scale), h: Math.round(9 * scale), color: 0x000000 })
+    this.stepsBar3 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 253, y: 305, w: Math.round(5 * scale), h: Math.round(14 * scale), color: 0x000000 })
+        
     this.stepsTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
-      x: 265,
+      x: 269,
       y: 297,
       w: 74,
       h: 30,
@@ -184,19 +188,20 @@ WatchFace({
       color: 0x000000,
       align_h: hmUI.align.LEFT,
       align_v: hmUI.align.CENTER_V,
-      
+      font: 'fonts/Outfit-ExtraBold.ttf',
       text: ''
     })
     
-    // Shortcut
+    // Shortcut Touch Area for STEP
     hmUI.createWidget(hmUI.widget.IMG_CLICK, {
-      x: 234,
-      y: 293,
-      w: 105,
-      h: 40,
+      x: 239,
+      y: 301,
+      w: 100,
+      h: 30,
       src: 'transparent.png',
       type: hmUI.data_type.STEP
     })
+      
       
     // Date Widget (Centered)
     this.monthDayTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
@@ -208,17 +213,16 @@ WatchFace({
       color: 0x8a90a6,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,
-      
+      font: 'fonts/Outfit-ExtraBold.ttf',
       text: ''
     })
+    
       
-    // Apply theme colors & update data values
     this.applyThemeColors()
     this.updateTime()
         this.updateBattery()
         this.updateSteps()
 
-    // 14. Set up listeners and timers
     this.setupListeners()
   },
 
@@ -231,10 +235,8 @@ WatchFace({
     this.batterySensor.addEventListener(hmSensor.event.CHANGE, updateBatteryCb)
     this.stepSensor.addEventListener(hmSensor.event.CHANGE, updateStepsCb)
 
-    // Timer for time update (every second)
     this.timeTimer = timer.createTimer(0, 1000, updateTimeCb)
 
-    // Use WIDGET_DELEGATE to manage active/inactive states
     hmUI.createWidget(hmUI.widget.WIDGET_DELEGATE, {
       resume_call: () => {
         console.log('Watchface resumed')
@@ -271,7 +273,11 @@ WatchFace({
     
     if (this.hourTextWidget) this.hourTextWidget.setProperty(hmUI.prop.COLOR, theme.line)
     if (this.minuteTextWidget) this.minuteTextWidget.setProperty(hmUI.prop.COLOR, theme.minute)
-    if (this.centerLineWidget) this.centerLineWidget.setProperty(hmUI.prop.COLOR, theme.line)
+    if (this.centerLineWidget) {
+      this.centerLineWidget.setProperty(hmUI.prop.MORE, {
+        color: theme.line
+      })
+    }
     if (this.batteryTextWidget) this.batteryTextWidget.setProperty(hmUI.prop.COLOR, 0x8a90a6)
     if (this.weekdayTextWidget) this.weekdayTextWidget.setProperty(hmUI.prop.COLOR, 0x8a90a6)
     if (this.stepsTextWidget) {
@@ -282,7 +288,6 @@ WatchFace({
     }
     if (this.monthDayTextWidget) this.monthDayTextWidget.setProperty(hmUI.prop.COLOR, 0x8a90a6)
 
-    // Update battery fill color and width
     this.updateBattery()
   },
 
@@ -310,7 +315,6 @@ WatchFace({
     const monthStr = MONTH_NAMES[monthIndex] || ''
     const weekStr = WEEK_DAYS[weekIndex] || ''
 
-    // Set Weekday & Date if widgets exist
     if (this.weekdayTextWidget) {
       this.weekdayTextWidget.setProperty(hmUI.prop.TEXT, weekStr)
     }
@@ -324,7 +328,7 @@ WatchFace({
     const batteryVal = this.batterySensor.current
     this.batteryTextWidget.setProperty(hmUI.prop.TEXT, `${batteryVal}%`)
 
-    // Update battery vector fill width (max 18)
+    // Update battery fill color and width
     const w_charge = Math.round(18 * (batteryVal / 100))
     let batteryColor = 0xeaf4ff
     if (batteryVal <= 20) {
@@ -339,12 +343,14 @@ WatchFace({
         color: batteryColor
       })
     }
+    
   },
   updateSteps() {
     if (!this.stepsTextWidget) return
     const stepsVal = this.stepSensor.current
     const formattedSteps = stepsVal.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")
     this.stepsTextWidget.setProperty(hmUI.prop.TEXT, formattedSteps)
+    
   },
   onDestroy() {
     console.log('index page.js on destroy invoke')

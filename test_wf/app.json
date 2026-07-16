@@ -2,11 +2,11 @@
   "configVersion": "v2",
   "app": {
     "appId": 1120255,
-    "appName": "Minimal Art V1.3",
+    "appName": "Minimal Art V1.2",
     "appType": "watchface",
     "version": {
-      "code": 7,
-      "name": "1.7"
+      "code": 8,
+      "name": "1.8"
     },
     "vender": "zepp",
     "description": "Minimal art digital watchface",
@@ -45,7 +45,7 @@
   },
   "i18n": {
     "en-US": {
-      "appName": "Minimal Art V1.3"
+      "appName": "Minimal Art V1.2"
     }
   },
   "defaultLanguage": "en-US",
