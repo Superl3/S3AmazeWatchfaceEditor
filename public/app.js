@@ -273,52 +273,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Render widget markup inside simulator
   function getWidgetHTML(widget) {
-    const color = widget.color === 'primary' ? 'var(--primary-color)' : (widget.color === 'secondary' ? 'var(--secondary-color)' : widget.customColor || 'var(--text-primary)');
+    const mainColor = widget.color === 'primary' ? 'var(--primary-color)' : (widget.color === 'secondary' ? 'var(--secondary-color)' : widget.customColor || 'var(--text-primary)');
+    const iconColor = widget.color === 'custom' ? (widget.customColor || 'var(--text-primary)') : 'var(--primary-color)';
+    const textColor = widget.color === 'custom' ? (widget.customColor || 'var(--text-primary)') : 'var(--secondary-color)';
     const iconSize = widget.iconSize || 24;
     const iconStyle = widget.iconStyle || '1';
 
     if (widget.type === 'HOUR') {
-      return `<div style="color: ${color}; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: ${widget.size}px;">10</div>`;
+      return `<div style="color: ${mainColor}; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: ${widget.size}px;">10</div>`;
     }
     if (widget.type === 'MINUTE') {
-      return `<div style="color: ${color}; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: ${widget.size}px;">09</div>`;
+      return `<div style="color: ${mainColor}; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: ${widget.size}px;">09</div>`;
     }
     if (widget.type === 'DIVIDER') {
-      return `<div style="width: 100%; height: 100%; background-color: ${color};"></div>`;
+      return `<div style="width: 100%; height: 100%; background-color: ${mainColor};"></div>`;
     }
 
     // Generate dynamic icon vector HTML based on style and scale
     let iconHTML = '';
     if (widget.type === 'BATTERY') {
       if (iconStyle === '1') {
-        iconHTML = `<div class="wf-vector-icon icon-battery" style="width: ${iconSize}px; height: ${iconSize * 0.6}px;"><div class="fill" style="background-color: ${color};"></div><div class="tip" style="background-color: ${color};"></div></div>`;
+        iconHTML = `<div class="wf-vector-icon icon-battery" style="width: ${iconSize}px; height: ${iconSize * 0.6}px;"><div class="fill" style="background-color: ${iconColor};"></div><div class="tip" style="background-color: ${iconColor};"></div></div>`;
       } else if (iconStyle === '2') {
-        iconHTML = `<div class="wf-vector-icon" style="width: ${iconSize * 0.6}px; height: ${iconSize}px; border: 2px solid ${color}; border-radius: 2px; position: relative; display: flex; align-items: flex-end; box-sizing: border-box;"><div class="fill" style="width: 100%; height: 75%; background-color: ${color};"></div><div class="tip" style="width: 50%; height: 2px; background-color: ${color}; position: absolute; top: -4px; left: 25%;"></div></div>`;
+        iconHTML = `<div class="wf-vector-icon" style="width: ${iconSize * 0.6}px; height: ${iconSize}px; border: 2px solid ${iconColor}; border-radius: 2px; position: relative; display: flex; align-items: flex-end; box-sizing: border-box;"><div class="fill" style="width: 100%; height: 75%; background-color: ${iconColor};"></div><div class="tip" style="width: 50%; height: 2px; background-color: ${iconColor}; position: absolute; top: -4px; left: 25%;"></div></div>`;
       } else {
-        iconHTML = `<div class="wf-vector-icon" style="width: ${iconSize}px; height: ${iconSize}px; display: flex; align-items: center; justify-content: center; color: ${color}; font-size: ${iconSize * 0.8}px; line-height: 1;">⚡</div>`;
+        iconHTML = `<div class="wf-vector-icon" style="width: ${iconSize}px; height: ${iconSize}px; display: flex; align-items: center; justify-content: center; color: ${iconColor}; font-size: ${iconSize * 0.8}px; line-height: 1;">⚡</div>`;
       }
     }
     else if (widget.type === 'STEP') {
       if (iconStyle === '1') {
-        iconHTML = `<div class="wf-vector-icon icon-steps" style="width: ${iconSize}px; height: ${iconSize}px;"><div class="bar bar-1" style="background-color: ${color};"></div><div class="bar bar-2" style="background-color: ${color};"></div><div class="bar bar-3" style="background-color: ${color};"></div></div>`;
+        iconHTML = `<div class="wf-vector-icon icon-steps" style="width: ${iconSize}px; height: ${iconSize}px;"><div class="bar bar-1" style="background-color: ${iconColor};"></div><div class="bar bar-2" style="background-color: ${iconColor};"></div><div class="bar bar-3" style="background-color: ${iconColor};"></div></div>`;
       } else if (iconStyle === '2') {
-        iconHTML = `<div class="wf-vector-icon" style="width: ${iconSize}px; height: ${iconSize}px; position: relative;"><div style="width: 35%; height: 60%; border-radius: 50% 50% 40% 40%; background-color: ${color}; position: absolute; left: 10%; bottom: 10%; transform: rotate(-15deg);"></div><div style="width: 35%; height: 60%; border-radius: 50% 50% 40% 40%; background-color: ${color}; position: absolute; right: 10%; top: 10%; transform: rotate(15deg);"></div></div>`;
+        iconHTML = `<div class="wf-vector-icon" style="width: ${iconSize}px; height: ${iconSize}px; position: relative;"><div style="width: 35%; height: 60%; border-radius: 50% 50% 40% 40%; background-color: ${iconColor}; position: absolute; left: 10%; bottom: 10%; transform: rotate(-15deg);"></div><div style="width: 35%; height: 60%; border-radius: 50% 50% 40% 40%; background-color: ${iconColor}; position: absolute; right: 10%; top: 10%; transform: rotate(15deg);"></div></div>`;
       } else {
         iconHTML = `<div class="wf-vector-icon" style="width: ${iconSize}px; height: ${iconSize}px; display: flex; align-items: center; justify-content: center; font-size: ${iconSize * 0.9}px; line-height: 1;">🏃</div>`;
       }
     }
     else if (widget.type === 'HEART') {
-      if (iconStyle === '1') {
-        iconHTML = `<div class="wf-vector-icon icon-heart" style="width: ${iconSize}px; height: ${iconSize}px;"><div class="line l-1" style="background-color: ${color};"></div><div class="line l-2" style="background-color: ${color};"></div><div class="line l-3" style="background-color: ${color};"></div><div class="line l-4" style="background-color: ${color};"></div></div>`;
-      } else if (iconStyle === '2') {
-        iconHTML = `<div class="wf-vector-icon" style="width: ${iconSize}px; height: ${iconSize}px; display: flex; align-items: center; justify-content: center; color: ${color}; font-size: ${iconSize * 0.9}px; line-height: 1;">❤️</div>`;
-      } else {
-        iconHTML = `<div class="wf-vector-icon" style="width: ${iconSize}px; height: ${iconSize}px; display: flex; align-items: center; justify-content: center; position: relative;"><div style="color: ${color}; font-size: ${iconSize * 0.6}px; z-index: 2; line-height: 1;">❤️</div><div style="width: 90%; height: 90%; border: 1.5px solid ${color}; border-radius: 50%; position: absolute; z-index: 1; opacity: 0.5; box-sizing: border-box;"></div></div>`;
-      }
+      // Beautiful SVG heart icon (primary color)
+      iconHTML = `<svg viewBox="0 0 24 24" width="${iconSize}" height="${iconSize}" style="display: block;" fill="${iconColor}"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`;
     }
     else if (widget.type === 'CAL') {
       if (iconStyle === '1') {
-        iconHTML = `<div class="wf-vector-icon icon-calorie" style="width: ${iconSize}px; height: ${iconSize}px;"><div class="f-1" style="background-color: ${color};"></div><div class="f-2" style="background-color: ${color};"></div></div>`;
+        iconHTML = `<div class="wf-vector-icon icon-calorie" style="width: ${iconSize}px; height: ${iconSize}px;"><div class="f-1" style="background-color: ${iconColor};"></div><div class="f-2" style="background-color: ${iconColor};"></div></div>`;
       } else if (iconStyle === '2') {
         iconHTML = `<div class="wf-vector-icon" style="width: ${iconSize}px; height: ${iconSize}px; display: flex; align-items: center; justify-content: center; font-size: ${iconSize * 0.9}px; line-height: 1;">🔥</div>`;
       } else {
@@ -327,7 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     else if (widget.type === 'DISTANCE') {
       if (iconStyle === '1') {
-        iconHTML = `<div class="wf-vector-icon icon-distance" style="width: ${iconSize}px; height: ${iconSize}px;"><div class="circle" style="border-color: ${color};"></div><div class="line" style="background-color: ${color};"></div></div>`;
+        iconHTML = `<div class="wf-vector-icon icon-distance" style="width: ${iconSize}px; height: ${iconSize}px;"><div class="circle" style="border-color: ${iconColor};"></div><div class="line" style="background-color: ${iconColor};"></div></div>`;
       } else if (iconStyle === '2') {
         iconHTML = `<div class="wf-vector-icon" style="width: ${iconSize}px; height: ${iconSize}px; display: flex; align-items: center; justify-content: center; font-size: ${iconSize * 0.9}px; line-height: 1;">📍</div>`;
       } else {
@@ -335,17 +332,17 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // Get Label Text
+    // Get Label Text (secondary color)
     let labelVal = '';
     if (widget.type === 'BATTERY') labelVal = '85%';
     else if (widget.type === 'STEP') labelVal = '8,420';
-    else if (widget.type === 'HEART') labelVal = '72 bpm';
+    else if (widget.type === 'HEART') labelVal = '72';
     else if (widget.type === 'CAL') labelVal = '340 kcal';
     else if (widget.type === 'DISTANCE') labelVal = '4.2 km';
-    else if (widget.type === 'WEEKDAY') return `<span class="wf-widget-label" style="color: ${color}; font-size: ${widget.size}px; width: 100%; text-align: center;">MON</span>`;
-    else if (widget.type === 'DATE') return `<span class="wf-widget-label" style="color: ${color}; font-size: ${widget.size}px; width: 100%; text-align: center;">JUL 16</span>`;
+    else if (widget.type === 'WEEKDAY') return `<span class="wf-widget-label" style="color: ${mainColor}; font-size: ${widget.size}px; width: 100%; text-align: center;">MON</span>`;
+    else if (widget.type === 'DATE') return `<span class="wf-widget-label" style="color: ${mainColor}; font-size: ${widget.size}px; width: 100%; text-align: center;">JUL 16</span>`;
 
-    const labelHTML = `<span class="wf-widget-label" style="color: ${color}; font-size: ${widget.size}px;">${labelVal}</span>`;
+    const labelHTML = `<span class="wf-widget-label" style="color: ${textColor}; font-size: ${widget.size}px;">${labelVal}</span>`;
 
     // Wrap in Progress Ring if enabled
     if (widget.showProgress && ['BATTERY', 'STEP', 'HEART', 'CAL', 'DISTANCE'].includes(widget.type)) {
@@ -366,7 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <div style="width: ${ringSize}px; height: ${ringSize}px; position: relative; display: flex; align-items: center; justify-content: center;">
             <svg width="${ringSize}" height="${ringSize}" style="position: absolute; transform: rotate(-90deg); top: 0; left: 0;">
               <circle cx="${ringSize/2}" cy="${ringSize/2}" r="${radius}" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="${strokeWidth}"/>
-              <circle cx="${ringSize/2}" cy="${ringSize/2}" r="${radius}" fill="none" stroke="${color}" stroke-width="${strokeWidth}" 
+              <circle cx="${ringSize/2}" cy="${ringSize/2}" r="${radius}" fill="none" stroke="${iconColor}" stroke-width="${strokeWidth}" 
                 stroke-dasharray="${circumference}" stroke-dashoffset="${strokeDashoffset}" stroke-linecap="round"/>
             </svg>
             <div style="position: relative; z-index: 2; display: flex; align-items: center; justify-content: center;">
