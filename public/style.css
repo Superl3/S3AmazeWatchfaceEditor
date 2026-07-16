@@ -783,3 +783,27 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .wf-widget {
   pointer-events: auto;
 }
+
+/* Simulator controls & checkboxes */
+.simulator-controls button {
+  transition: all 0.2s ease;
+}
+.simulator-controls button:hover {
+  background-color: var(--primary-color) !important;
+  color: #fff !important;
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 10px rgba(0, 245, 255, 0.4);
+}
+
+.checkbox-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary-color);
+  cursor: pointer;
+}
+
+.checkbox-item label {
+  font-size: 13px;
+  font-weight: 500;
+}
+

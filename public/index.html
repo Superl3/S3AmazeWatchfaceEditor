@@ -46,6 +46,12 @@
             <div class="crown-top"></div>
             <div class="crown-bottom"></div>
           </div>
+          <!-- Simulator Utility Controls (Undo, Redo, AOD Mode) -->
+          <div class="simulator-controls" style="margin-top: 15px; display: flex; gap: 10px; justify-content: center; width: 100%;">
+            <button id="btnUndo" class="btn btn-secondary" style="padding: 6px 12px; font-size: 13px;" title="Undo (Ctrl+Z)">↶ Undo</button>
+            <button id="btnRedo" class="btn btn-secondary" style="padding: 6px 12px; font-size: 13px;" title="Redo (Ctrl+Y)">↷ Redo</button>
+            <button id="btnToggleAod" class="btn btn-secondary" style="padding: 6px 12px; font-size: 13px; margin-left: 15px;">🌙 Awake Mode</button>
+          </div>
         </div>
 
         <!-- Action / Build Panel -->
@@ -261,6 +267,56 @@
               <div class="input-item" id="inspectCustomColorContainer" style="display: none;">
                 <label for="inspectCustomColor">Custom Hex</label>
                 <input type="color" id="inspectCustomColor" value="#ff5a36" style="height: 38px;">
+              </div>
+            </div>
+
+            <!-- Icon Styling (Only for complications) -->
+            <div class="form-group row" style="margin-top: 15px; display: none;" id="inspectIconStyleContainer">
+              <div class="input-item">
+                <label for="inspectIconStyle">Icon Style</label>
+                <select id="inspectIconStyle">
+                  <option value="1">Style 1 (Standard/Minimal)</option>
+                  <option value="2">Style 2 (Classic/Filled)</option>
+                  <option value="3">Style 3 (Circular/Badge)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Icon Size (Only for complications) -->
+            <div class="form-group range-group" style="margin-top: 15px; display: none;" id="inspectIconSizeContainer">
+              <div class="range-item">
+                <div class="range-label">
+                  <span>Icon Size</span>
+                  <span id="inspectValIconSize">24px</span>
+                </div>
+                <input type="range" id="inspectIconSize" min="12" max="36" value="24">
+              </div>
+            </div>
+
+            <!-- Show Progress Ring (Only for battery/steps complications) -->
+            <div class="form-group row" style="margin-top: 15px; display: none;" id="inspectProgressRingContainer">
+              <div class="input-item checkbox-item" style="flex-direction: row; align-items: center; gap: 8px;">
+                <input type="checkbox" id="inspectProgressRing" style="width: auto; margin: 0; cursor: pointer;">
+                <label for="inspectProgressRing" style="margin: 0; cursor: pointer; user-select: none;">Show Progress Ring</label>
+              </div>
+            </div>
+
+            <!-- Shortcut Target (For all widgets) -->
+            <div class="form-group row" style="margin-top: 15px;">
+              <div class="input-item">
+                <label for="inspectShortcut">Interactive Touch Target</label>
+                <select id="inspectShortcut">
+                  <option value="DEFAULT">Default (Auto-shortcut)</option>
+                  <option value="NONE">None (Non-clickable)</option>
+                  <option value="HEART">Heart Rate App</option>
+                  <option value="STEP">Activity/Steps App</option>
+                  <option value="BATTERY">Battery Status App</option>
+                  <option value="STRESS">Stress/Relax App</option>
+                  <option value="WEATHER">Weather App</option>
+                  <option value="MUSIC">Music Control App</option>
+                  <option value="ALARM">Alarm Clock App</option>
+                  <option value="STOPWATCH">Stopwatch App</option>
+                </select>
               </div>
             </div>
           </div>

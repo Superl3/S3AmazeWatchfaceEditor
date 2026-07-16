@@ -14,6 +14,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 const CONFIG_PATH = path.join(__dirname, 'config.json');
 const APP_JSON_PATH = path.join(__dirname, 'test_wf', 'app.json');
 const INDEX_JS_PATH = path.join(__dirname, 'test_wf', 'watchface', 'index.js');
+const AOD_JS_PATH = path.join(__dirname, 'test_wf', 'watchface', 'aod.js');
 const QRCODE_PATH = path.join(__dirname, 'qrcode.png');
 
 const DEFAULT_CONFIG = {
@@ -24,7 +25,7 @@ const DEFAULT_CONFIG = {
   stepsColor: '#ff5a36',
   batteryLow: 20,
   batteryHigh: 80,
-  appName: 'Minimal Art V1.2',
+  appName: 'Minimal Art V1.3',
   appId: 1120255,
   fontFamily: 'Outfit',
   backgroundStyle: 'none',
@@ -38,10 +39,10 @@ const DEFAULT_CONFIG = {
     { type: 'HOUR', x: 40, y: 162, size: 96, color: 'primary' },
     { type: 'MINUTE', x: 244, y: 162, size: 96, color: 'secondary' },
     { type: 'DIVIDER', x: 226, y: 67, w: 2, h: 320, color: 'primary' },
-    { type: 'BATTERY', x: 115, y: 313, size: 22, color: 'secondary' },
-    { type: 'WEEKDAY', x: 115, y: 338, size: 16, color: 'secondary' },
-    { type: 'STEP', x: 239, y: 313, size: 22, color: 'primary' },
-    { type: 'DATE', x: 239, y: 338, size: 16, color: 'secondary' }
+    { type: 'BATTERY', x: 115, y: 313, size: 22, color: 'secondary', iconStyle: '1', iconSize: 24, showProgress: false, shortcut: 'DEFAULT' },
+    { type: 'WEEKDAY', x: 115, y: 338, size: 16, color: 'secondary', shortcut: 'DEFAULT' },
+    { type: 'STEP', x: 239, y: 313, size: 22, color: 'primary', iconStyle: '1', iconSize: 24, showProgress: false, shortcut: 'DEFAULT' },
+    { type: 'DATE', x: 239, y: 338, size: 16, color: 'secondary', shortcut: 'DEFAULT' }
   ]
 };
 
@@ -58,6 +59,15 @@ const FONT_FILENAMES = {
   'Share Tech Mono': 'ShareTechMono-Regular.ttf',
   'JetBrains Mono': 'JetBrainsMono-ExtraBold.ttf'
 };
+
+const PRESETS = [
+  { primary: '#ff5a36', secondary: '#eaf4ff' },
+  { primary: '#ff7b90', secondary: '#fff0f2' },
+  { primary: '#7cd1a1', secondary: '#f0faf4' },
+  { primary: '#8f9eff', secondary: '#f2f4ff' },
+  { primary: '#ffd670', secondary: '#fffcf2' },
+  { primary: '#ff9e7d', secondary: '#fff5f2' }
+];
 
 // Ensure config.json exists
 if (!fs.existsSync(CONFIG_PATH)) {
@@ -166,6 +176,14 @@ app.post('/api/save', async (req, res) => {
       }
     }
 
+    // Generate Dynamic Thumbnail (icon.png) representing the user's custom design
+    const iconDest = path.join(__dirname, 'test_wf', 'assets', '454x454-amazfit-gtr-3', 'icon.png');
+    try {
+      await generateThumbnail(config, iconDest);
+    } catch (iconErr) {
+      console.error('Failed to generate thumbnail icon:', iconErr);
+    }
+
     // Update app.json
     if (fs.existsSync(APP_JSON_PATH)) {
       const appJsonData = fs.readFileSync(APP_JSON_PATH, 'utf8');
@@ -184,9 +202,13 @@ app.post('/api/save', async (req, res) => {
       fs.writeFileSync(APP_JSON_PATH, JSON.stringify(appJson, null, 2));
     }
 
-    // Generate index.js
+    // Generate index.js (Active Watchface)
     const indexJsContent = generateIndexJs(config);
     fs.writeFileSync(INDEX_JS_PATH, indexJsContent);
+
+    // Generate aod.js (Always-On Display Watchface)
+    const aodJsContent = generateAodJs(config);
+    fs.writeFileSync(AOD_JS_PATH, aodJsContent);
 
     res.json({ success: true, config });
   } catch (err) {
@@ -236,6 +258,119 @@ app.post('/api/build', (req, res) => {
     });
   });
 });
+
+// Dynamic Watchface Preview Thumbnail Generator (icon.png)
+async function generateThumbnail(config, destPath) {
+  const canvas = await new Jimp(454, 454, 0x000000ff);
+  
+  // Composite Background
+  if (config.backgroundStyle && config.backgroundStyle !== 'none') {
+    const bgImgPath = path.join(__dirname, 'public', `bg_${config.backgroundStyle}.png`);
+    if (fs.existsSync(bgImgPath)) {
+      const bgImg = await Jimp.read(bgImgPath);
+      const bgScale = config.backgroundScale || 100;
+      const bgX = config.backgroundX || 0;
+      const bgY = config.backgroundY || 0;
+      const w = Math.round(454 * (bgScale / 100));
+      const h = Math.round(454 * (bgScale / 100));
+      bgImg.resize(w, h);
+      
+      const bgRotation = config.backgroundRotation || 0;
+      if (bgRotation !== 0) {
+        bgImg.rotate(-bgRotation, false);
+      }
+      
+      const alphaVal = (config.backgroundOpacity !== undefined ? config.backgroundOpacity : 40) / 100;
+      bgImg.opacity(alphaVal);
+      const x = Math.round(- (w - 454) / 2 + bgX);
+      const y = Math.round(- (h - 454) / 2 + bgY);
+      canvas.composite(bgImg, x, y);
+    }
+  }
+
+  // Draw outer subtle ring
+  const ring = await new Jimp(454, 454, 0x00000000);
+  // Drawing concentric ring using custom pixel loop
+  for (let x = 0; x < 454; x++) {
+    for (let y = 0; y < 454; y++) {
+      const dx = x - 227;
+      const dy = y - 227;
+      const r = Math.sqrt(dx * dx + dy * dy);
+      if (Math.abs(r - 215) < 1) {
+        ring.setPixelColor(0x222633ff, x, y);
+      }
+    }
+  }
+  canvas.composite(ring, 0, 0);
+
+  // Load Colors
+  const activePreset = PRESETS[config.themeIndex] || PRESETS[0];
+  const primaryColor = config.lineColor || activePreset.primary;
+  const secondaryColor = config.minuteColor || activePreset.secondary;
+
+  const font32 = await Jimp.loadFont(Jimp.FONT_SANS_32_WHITE);
+  const font64 = await Jimp.loadFont(Jimp.FONT_SANS_64_WHITE);
+  const font16 = await Jimp.loadFont(Jimp.FONT_SANS_16_WHITE);
+
+  // Overlay Widgets
+  const widgetsList = config.widgets || [];
+  for (const w of widgetsList) {
+    let colorHex = w.color === 'primary' ? primaryColor : (w.color === 'secondary' ? secondaryColor : w.customColor || '#ffffff');
+    // Normalize colorHex
+    if (!colorHex.startsWith('#')) colorHex = '#' + colorHex;
+    
+    if (w.type === 'HOUR' || w.type === 'MINUTE') {
+      const textImg = new Jimp(180, 130, 0x00000000);
+      const useFont = w.size > 80 ? font64 : font32;
+      textImg.print(useFont, 0, 10, w.type === 'HOUR' ? '10' : '09', 180, 130, {
+        alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER,
+        alignmentY: Jimp.VERTICAL_ALIGN_MIDDLE
+      });
+      textImg.color([{ apply: 'mix', params: [colorHex, 100] }]);
+      canvas.composite(textImg, w.x, w.y - 14);
+    } 
+    else if (w.type === 'DIVIDER') {
+      const rectImg = new Jimp(w.w || 2, w.h || 320, colorHex + 'ff');
+      canvas.composite(rectImg, w.x, w.y);
+    } 
+    else if (['BATTERY', 'STEP', 'HEART', 'CAL', 'DISTANCE', 'WEEKDAY', 'DATE'].includes(w.type)) {
+      let labelVal = '';
+      if (w.type === 'BATTERY') labelVal = '85%';
+      else if (w.type === 'STEP') labelVal = '8.4K';
+      else if (w.type === 'HEART') labelVal = '72';
+      else if (w.type === 'CAL') labelVal = '340';
+      else if (w.type === 'DISTANCE') labelVal = '4.2';
+      else if (w.type === 'WEEKDAY') labelVal = 'MON';
+      else if (w.type === 'DATE') labelVal = 'JUL 16';
+
+      const labelImg = new Jimp(100, 30, 0x00000000);
+      labelImg.print(font16, 0, 0, labelVal);
+      labelImg.color([{ apply: 'mix', params: [colorHex, 100] }]);
+      
+      const offset = (w.showProgress && ['BATTERY', 'STEP'].includes(w.type)) ? 46 : 26;
+      canvas.composite(labelImg, w.x + offset, w.y - 12);
+
+      // Draw progress ring if enabled
+      if (w.showProgress && ['BATTERY', 'STEP'].includes(w.type)) {
+        const ringSize = 34;
+        const ring = new Jimp(ringSize, ringSize, 0x00000000);
+        for (let rx = 0; rx < ringSize; rx++) {
+          for (let ry = 0; ry < ringSize; ry++) {
+            const dx = rx - ringSize/2;
+            const dy = ry - ringSize/2;
+            const r = Math.sqrt(dx * dx + dy * dy);
+            if (Math.abs(r - 14) < 1.5) {
+              ring.setPixelColor(parseInt(colorHex.replace('#', '0x') + 'ff'), rx, ry);
+            }
+          }
+        }
+        canvas.composite(ring, w.x, w.y - 12);
+      }
+    }
+  }
+
+  await canvas.writeAsync(destPath);
+}
 
 // Programmatic Anti-Aliased Pattern Engine
 const WIDTH = 908;
@@ -358,7 +493,6 @@ async function generatePatternImage(style, spacing, rotation = 0) {
       drawCircle(img, cx, cy, sizeVal + 20, COLOR_GREY, 3);
     };
 
-    // Tiled wallpaper grid repeat (Endless 바둑판 렌더링)
     const pad = spacing2x * 2;
     for (let x = -pad; x < WIDTH + pad; x += spacing2x * 3) {
       for (let y = -pad; y < HEIGHT + pad; y += spacing2x * 3) {
@@ -450,7 +584,6 @@ async function generatePatternImage(style, spacing, rotation = 0) {
     }
   } 
   else if (style === 'stars') {
-    // Endless tiled constellation clusters (바둑판 렌더링)
     for (let bx = -spacing2x; bx < WIDTH + spacing2x; bx += spacing2x * 2.5) {
       for (let by = -spacing2x; by < HEIGHT + spacing2x; by += spacing2x * 2.5) {
         const s0 = { x: bx + spacing * 0.4, y: by + spacing * 0.3 };
@@ -474,7 +607,6 @@ async function generatePatternImage(style, spacing, rotation = 0) {
     }
   } 
   else if (style === 'circuit') {
-    // Endless tiled circuit modules (바둑판 렌더링)
     const block = spacing2x * 2;
     for (let bx = -block; bx < WIDTH + block; bx += block) {
       for (let by = -block; by < HEIGHT + block; by += block) {
@@ -518,7 +650,6 @@ async function generatePatternImage(style, spacing, rotation = 0) {
       drawLine(img, cx - dist, cy, cx, cy - dist, COLOR_GREY, 3);
     };
 
-    // Tiled wallpaper grid repeat (Endless 바둑판 렌더링)
     const pad = spacing2x * 2;
     for (let x = -pad; x < WIDTH + pad; x += spacing2x * 3.5) {
       for (let y = -pad; y < HEIGHT + pad; y += spacing2x * 3.5) {
@@ -537,7 +668,6 @@ async function generatePatternImage(style, spacing, rotation = 0) {
     }
   } 
   else if (style === 'poly') {
-    // Endless tiled geometric mesh (Endless 바둑판 렌더링)
     for (let x = -spacing2x; x < WIDTH + spacing2x; x += spacing2x) {
       for (let y = -spacing2x; y < HEIGHT + spacing2x; y += spacing2x) {
         for (let dx = -3; dx <= 3; dx++) {
@@ -552,7 +682,6 @@ async function generatePatternImage(style, spacing, rotation = 0) {
     }
   }
   else if (style === 'chevron') {
-    // Luxury V-shape Zigzag Grid
     for (let x = -spacing2x; x < WIDTH + spacing2x; x += spacing2x) {
       for (let y = -spacing2x; y < HEIGHT + spacing2x; y += spacing2x) {
         drawLine(img, x, y, x + spacing, y + spacing, COLOR_GREY, 3);
@@ -561,7 +690,6 @@ async function generatePatternImage(style, spacing, rotation = 0) {
     }
   }
   else if (style === 'crosshair') {
-    // Tech Crosshair Grid
     for (let x = spacing2x; x < WIDTH; x += spacing2x) {
       for (let y = spacing2x; y < HEIGHT; y += spacing2x) {
         drawCircle(img, x, y, Math.round(spacing / 3), COLOR_GREY, 2);
@@ -571,7 +699,6 @@ async function generatePatternImage(style, spacing, rotation = 0) {
     }
   }
   else if (style === 'ripple') {
-    // Concentric Ripples Tiled Grid
     for (let x = spacing2x; x < WIDTH; x += spacing2x) {
       for (let y = spacing2x; y < HEIGHT; y += spacing2x) {
         drawCircle(img, x, y, Math.round(spacing / 3), COLOR_GREY, 2);
@@ -580,7 +707,6 @@ async function generatePatternImage(style, spacing, rotation = 0) {
     }
   }
   else if (style === 'maze') {
-    // Generative Truchet Maze Tiling
     for (let x = -spacing2x; x < WIDTH + spacing2x; x += spacing2x) {
       for (let y = -spacing2x; y < HEIGHT + spacing2x; y += spacing2x) {
         const rand = Math.abs(Math.sin(x * 12.9898 + y * 78.233) * 43758.5453) % 1;
@@ -596,12 +722,10 @@ async function generatePatternImage(style, spacing, rotation = 0) {
     }
   }
   else if (style === 'baroque') {
-    // Royal Baroque Fleur-de-lis Scroll Wallpaper Motif
     const drawBaroqueMotif = (cx, cy) => {
       const step = 0.01;
       const sizeVal = Math.round(spacing * 0.9);
       
-      // Draw vertical fleur-de-lis petal leaf
       for (let t = 0; t < 2 * Math.PI; t += step) {
         const r = sizeVal * (1 - Math.sin(t)) * (0.5 + 0.5 * Math.cos(t) * Math.cos(t));
         const px = Math.round(cx + r * Math.sin(t));
@@ -611,7 +735,6 @@ async function generatePatternImage(style, spacing, rotation = 0) {
         }
       }
 
-      // Draw left scroll
       for (let t = 0; t < 3.5; t += 0.05) {
         const px = Math.round(cx - spacing * 0.6 * Math.sin(t) - spacing * 0.3);
         const py = Math.round(cy + spacing * 0.8 * Math.cos(t) + (t * 8));
@@ -620,7 +743,6 @@ async function generatePatternImage(style, spacing, rotation = 0) {
         }
       }
 
-      // Draw right scroll (mirrored)
       for (let t = 0; t < 3.5; t += 0.05) {
         const px = Math.round(cx + spacing * 0.6 * Math.sin(t) + spacing * 0.3);
         const py = Math.round(cy + spacing * 0.8 * Math.cos(t) + (t * 8));
@@ -629,7 +751,6 @@ async function generatePatternImage(style, spacing, rotation = 0) {
         }
       }
 
-      // Decorative outer diamond
       const dist = sizeVal + 40;
       drawLine(img, cx, cy - dist, cx + dist, cy, COLOR_GREY, 2);
       drawLine(img, cx + dist, cy, cx, cy + dist, COLOR_GREY, 2);
@@ -637,7 +758,6 @@ async function generatePatternImage(style, spacing, rotation = 0) {
       drawLine(img, cx - dist, cy, cx, cy - dist, COLOR_GREY, 2);
     };
 
-    // Offset brick tiling
     const stepX = spacing2x * 3;
     const stepY = spacing2x * 3;
     for (let x = -stepX; x < WIDTH + stepX; x += stepX) {
@@ -648,7 +768,6 @@ async function generatePatternImage(style, spacing, rotation = 0) {
     }
   }
   else if (style === 'meander') {
-    // Ancient Greek Border Meander (Greek Key)
     for (let x = -spacing2x; x < WIDTH + spacing2x; x += spacing2x) {
       for (let y = -spacing2x; y < HEIGHT + spacing2x; y += spacing2x) {
         drawLine(img, x, y, x + spacing2x, y, COLOR_GREY, 3);
@@ -661,16 +780,31 @@ async function generatePatternImage(style, spacing, rotation = 0) {
     }
   }
 
-  // High-Quality Rotation on 2x Canvas prior to downsampling (Fixes anti-aliasing on rotated lines)
   if (rotation !== 0) {
     img.rotate(-rotation, false);
   }
 
-  // Downscale resize with bicubic interpolation (Anti-Aliasing)
   img.resize(TARGET_W, TARGET_H, Jimp.RESIZE_BICUBIC);
   return img;
 }
 
+// Widget Shortcut Map compiler helper
+function getShortcutType(widget) {
+  const target = widget.shortcut || 'DEFAULT';
+  if (target === 'NONE') return '';
+  if (target !== 'DEFAULT') {
+    return `hmUI.data_type.${target}`;
+  }
+  // Auto mapping defaults
+  if (widget.type === 'BATTERY') return 'hmUI.data_type.BATTERY';
+  if (widget.type === 'STEP') return 'hmUI.data_type.STEP';
+  if (widget.type === 'HEART') return 'hmUI.data_type.HEART';
+  if (widget.type === 'CAL') return 'hmUI.data_type.STRESS';
+  if (widget.type === 'DISTANCE') return 'hmUI.data_type.DISTANCE';
+  return '';
+}
+
+// Generate index.js layout template code (Awake Mode)
 function generateIndexJs(config) {
   const activeSensors = new Set();
   const widgetsList = config.widgets || [];
@@ -680,7 +814,6 @@ function generateIndexJs(config) {
     }
   });
 
-  // Sensor Init Code
   let onInitSensors = '';
   if (activeSensors.has('BATTERY')) onInitSensors += "    this.batterySensor = hmSensor.createSensor(hmSensor.id.BATTERY)\n";
   if (activeSensors.has('STEP')) onInitSensors += "    this.stepSensor = hmSensor.createSensor(hmSensor.id.STEP)\n";
@@ -688,10 +821,7 @@ function generateIndexJs(config) {
   if (activeSensors.has('CAL')) onInitSensors += "    this.calSensor = hmSensor.createSensor(hmSensor.id.CALORIE)\n";
   if (activeSensors.has('DISTANCE')) onInitSensors += "    this.distanceSensor = hmSensor.createSensor(hmSensor.id.DISTANCE)\n";
 
-  // Complication widget declarations in build()
   let buildWidgets = '';
-  
-  // Custom font file naming conventions
   const fontFilename = FONT_FILENAMES[config.fontFamily] || 'Outfit-ExtraBold.ttf';
   const fontPath = `font: 'fonts/${fontFilename}',`;
   const timeFontPath = `font: 'fonts/${fontFilename}',`;
@@ -699,16 +829,35 @@ function generateIndexJs(config) {
   widgetsList.forEach(w => {
     if (w.type === 'NONE') return;
 
+    const shortcutType = getShortcutType(w);
+    let shortcutWidget = '';
+    const clickAreaW = (w.showProgress && ['BATTERY', 'STEP'].includes(w.type)) ? 120 : 100;
+    const clickAreaH = (w.showProgress && ['BATTERY', 'STEP'].includes(w.type)) ? 44 : 30;
+
+    if (shortcutType) {
+      shortcutWidget = `
+    // Shortcut Touch Area for ${w.type}
+    hmUI.createWidget(hmUI.widget.IMG_CLICK, {
+      x: ${w.x},
+      y: ${w.y - 12},
+      w: ${clickAreaW},
+      h: ${clickAreaH},
+      src: 'transparent.png',
+      type: ${shortcutType}
+    })
+      `;
+    }
+
     if (w.type === 'HOUR') {
       buildWidgets += `
-    // Hour Widget (With 14px vertical baseline compensation offset and custom bold font)
+    // Hour Widget
     this.hourTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
       x: ${w.x},
       y: ${w.y - 14},
       w: 180,
       h: 130,
       text_size: ${w.size},
-      color: 0x000000, // Set by applyThemeColors()
+      color: 0x000000,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,
       ${timeFontPath}
@@ -717,14 +866,14 @@ function generateIndexJs(config) {
       `;
     } else if (w.type === 'MINUTE') {
       buildWidgets += `
-    // Minute Widget (With 14px vertical baseline compensation offset and custom bold font)
+    // Minute Widget
     this.minuteTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
       x: ${w.x},
       y: ${w.y - 14},
       w: 180,
       h: 130,
       text_size: ${w.size},
-      color: 0x000000, // Set by applyThemeColors()
+      color: 0x000000,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,
       ${timeFontPath}
@@ -732,9 +881,8 @@ function generateIndexJs(config) {
     })
       `;
     } else if (w.type === 'DIVIDER') {
-      // In build(), we draw the divider with the correct active theme line color immediately!
       buildWidgets += `
-    // Divider Accent Line (Starts with activeTheme.line to prevent black blockage)
+    // Divider Accent Line
     const activeTheme = THEMES[this.currentThemeIndex]
     this.centerLineWidget = hmUI.createWidget(hmUI.widget.FILL_RECT, {
       x: ${w.x},
@@ -758,19 +906,48 @@ function generateIndexJs(config) {
     })
       `;
     } else if (w.type === 'BATTERY') {
+      const scale = (w.iconSize || 24) / 24;
+      const textXOffset = w.showProgress ? 50 : Math.round(24 * scale) + 6;
+      const textYOffset = w.showProgress ? -12 : -16;
+
+      let drawIconCode = '';
+      if (w.iconStyle === '2') { // Vertical Battery
+        drawIconCode = `
+    hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x}, y: ${w.y - Math.round(12 * scale)}, w: ${Math.round(14 * scale)}, h: ${Math.round(24 * scale)}, radius: ${Math.round(2 * scale)}, color: 0x4a4e5d })
+    hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + 1}, y: ${w.y - Math.round(11 * scale)}, w: ${Math.round(12 * scale)}, h: ${Math.round(22 * scale)}, radius: ${Math.round(1 * scale)}, color: 0x000000 })
+    hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + Math.round(4 * scale)}, y: ${w.y - Math.round(14 * scale)}, w: ${Math.round(6 * scale)}, h: ${Math.round(2 * scale)}, color: 0x4a4e5d })
+    this.batteryFillWidget = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + Math.round(3 * scale)}, y: ${w.y - Math.round(9 * scale)}, w: ${Math.round(8 * scale)}, h: ${Math.round(18 * scale)}, color: 0x8a90a6 })
+        `;
+      } else if (w.iconStyle === '3') { // Circle Bolt
+        drawIconCode = `
+    this.batteryOutline = hmUI.createWidget(hmUI.widget.ARC, { x: ${w.x}, y: ${w.y - Math.round(12 * scale)}, w: ${Math.round(24 * scale)}, h: ${Math.round(24 * scale)}, start_angle: 0, end_angle: 360, color: 0x4a4e5d, line_width: 2 })
+    this.batteryFillWidget = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + Math.round(10 * scale)}, y: ${w.y - Math.round(7 * scale)}, w: ${Math.round(4 * scale)}, h: ${Math.round(14 * scale)}, color: 0x8a90a6 })
+        `;
+      } else { // Style 1: Horizontal Battery (Default)
+        drawIconCode = `
+    hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x}, y: ${w.y - Math.round(8 * scale)}, w: ${Math.round(24 * scale)}, h: ${Math.round(14 * scale)}, radius: ${Math.round(2 * scale)}, color: 0x4a4e5d })
+    hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + 1}, y: ${w.y - Math.round(7 * scale)}, w: ${Math.round(22 * scale)}, h: ${Math.round(12 * scale)}, radius: ${Math.round(1 * scale)}, color: 0x000000 })
+    hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + Math.round(24 * scale)}, y: ${w.y - Math.round(4 * scale)}, w: ${Math.round(2 * scale)}, h: ${Math.round(6 * scale)}, color: 0x4a4e5d })
+    this.batteryFillWidget = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + Math.round(3 * scale)}, y: ${w.y - Math.round(5 * scale)}, w: ${Math.round(18 * scale)}, h: ${Math.round(8 * scale)}, color: 0x8a90a6 })
+        `;
+      }
+
+      let drawProgressCode = '';
+      if (w.showProgress) {
+        drawProgressCode = `
+    // Battery Progress Arc Rings
+    this.batteryArcBg = hmUI.createWidget(hmUI.widget.ARC, { x: ${w.x}, y: ${w.y - 12}, w: 44, h: 44, start_angle: 0, end_angle: 360, color: 0x222633, line_width: 3 })
+    this.batteryArcVal = hmUI.createWidget(hmUI.widget.ARC, { x: ${w.x}, y: ${w.y - 12}, w: 44, h: 44, start_angle: -90, end_angle: 270, color: 0x8a90a6, line_width: 3 })
+        `;
+      }
+
       buildWidgets += `
-    // Battery Vector Icon (Outline)
-    hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x}, y: ${w.y - 8}, w: 24, h: 14, radius: 2, color: 0x4a4e5d })
-    hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + 1}, y: ${w.y - 7}, w: 22, h: 12, radius: 1, color: 0x000000 })
-    hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + 24}, y: ${w.y - 4}, w: 2, h: 6, color: 0x4a4e5d })
-    
-    // Battery Fill Bar (Dynamic)
-    this.batteryFillWidget = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + 3}, y: ${w.y - 5}, w: 18, h: 8, color: 0x8a90a6 })
-    
-    // Battery Text Widget
+    // Battery Complication
+    ${drawProgressCode}
+    ${drawIconCode}
     this.batteryTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
-      x: ${w.x + 30},
-      y: ${w.y - 16},
+      x: ${w.x + textXOffset},
+      y: ${w.y + textYOffset},
       w: 70,
       h: 30,
       text_size: ${w.size},
@@ -780,28 +957,50 @@ function generateIndexJs(config) {
       ${fontPath}
       text: ''
     })
-    
-    // Shortcut
-    hmUI.createWidget(hmUI.widget.IMG_CLICK, {
-      x: ${w.x - 5},
-      y: ${w.y - 20},
-      w: 105,
-      h: 40,
-      src: 'transparent.png',
-      type: hmUI.data_type.BATTERY
-    })
+    ${shortcutWidget}
       `;
     } else if (w.type === 'STEP') {
+      const scale = (w.iconSize || 24) / 24;
+      const textXOffset = w.showProgress ? 50 : Math.round(24 * scale) + 6;
+      const textYOffset = w.showProgress ? -12 : -16;
+
+      let drawIconCode = '';
+      if (w.iconStyle === '2') { // Footprints
+        drawIconCode = `
+    this.stepsBar1 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + Math.round(2 * scale)}, y: ${w.y + Math.round(2 * scale)}, w: Math.round(8 * scale), h: Math.round(14 * scale), radius: Math.round(4 * scale), color: 0x000000 })
+    this.stepsBar2 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + Math.round(12 * scale)}, y: ${w.y - Math.round(2 * scale)}, w: Math.round(8 * scale), h: Math.round(14 * scale), radius: Math.round(4 * scale), color: 0x000000 })
+    this.stepsBar3 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x}, y: ${w.y}, w: 1, h: 1, color: 0x000000 }) // Dummy for binding
+        `;
+      } else if (w.iconStyle === '3') { // Circle Runner
+        drawIconCode = `
+    this.stepsBar1 = hmUI.createWidget(hmUI.widget.ARC, { x: ${w.x}, y: ${w.y - Math.round(12 * scale)}, w: ${Math.round(24 * scale)}, h: ${Math.round(24 * scale)}, start_angle: 0, end_angle: 360, color: 0x000000, line_width: 2 })
+    this.stepsBar2 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + Math.round(10 * scale)}, y: ${w.y - Math.round(7 * scale)}, w: Math.round(4 * scale), h: Math.round(14 * scale), color: 0x000000 })
+    this.stepsBar3 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x}, y: ${w.y}, w: 1, h: 1, color: 0x000000 }) // Dummy
+        `;
+      } else { // Staircase (Default)
+        drawIconCode = `
+    this.stepsBar1 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x}, y: ${w.y + Math.round(2 * scale)}, w: Math.round(5 * scale), h: Math.round(4 * scale), color: 0x000000 })
+    this.stepsBar2 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + Math.round(7 * scale)}, y: ${w.y - Math.round(3 * scale)}, w: Math.round(5 * scale), h: Math.round(9 * scale), color: 0x000000 })
+    this.stepsBar3 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + Math.round(14 * scale)}, y: ${w.y - Math.round(8 * scale)}, w: Math.round(5 * scale), h: Math.round(14 * scale), color: 0x000000 })
+        `;
+      }
+
+      let drawProgressCode = '';
+      if (w.showProgress) {
+        drawProgressCode = `
+    // Steps Progress Arc Rings
+    this.stepsArcBg = hmUI.createWidget(hmUI.widget.ARC, { x: ${w.x}, y: ${w.y - 12}, w: 44, h: 44, start_angle: 0, end_angle: 360, color: 0x222633, line_width: 3 })
+    this.stepsArcVal = hmUI.createWidget(hmUI.widget.ARC, { x: ${w.x}, y: ${w.y - 12}, w: 44, h: 44, start_angle: -90, end_angle: 270, color: 0x000000, line_width: 3 })
+        `;
+      }
+
       buildWidgets += `
-    // Steps Vector Icon (Staircase)
-    this.stepsBar1 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x}, y: ${w.y + 2}, w: 5, h: 4, color: 0x000000 })
-    this.stepsBar2 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + 7}, y: ${w.y - 3}, w: 5, h: 9, color: 0x000000 })
-    this.stepsBar3 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + 14}, y: ${w.y - 8}, w: 5, h: 14, color: 0x000000 })
-    
-    // Steps Text Widget
+    // Steps Complication
+    ${drawProgressCode}
+    ${drawIconCode}
     this.stepsTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
-      x: ${w.x + 26},
-      y: ${w.y - 16},
+      x: ${w.x + textXOffset},
+      y: ${w.y + textYOffset},
       w: 74,
       h: 30,
       text_size: ${w.size},
@@ -811,28 +1010,41 @@ function generateIndexJs(config) {
       ${fontPath}
       text: ''
     })
-    
-    // Shortcut
-    hmUI.createWidget(hmUI.widget.IMG_CLICK, {
-      x: ${w.x - 5},
-      y: ${w.y - 20},
-      w: 105,
-      h: 40,
-      src: 'transparent.png',
-      type: hmUI.data_type.STEP
-    })
+    ${shortcutWidget}
       `;
     } else if (w.type === 'HEART') {
+      const scale = (w.iconSize || 24) / 24;
+      const textXOffset = Math.round(24 * scale) + 6;
+
+      let drawIconCode = '';
+      if (w.iconStyle === '2') { // Solid Heart Badge
+        drawIconCode = `
+    this.heartLine1 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + Math.round(4 * scale)}, y: ${w.y - Math.round(6 * scale)}, w: Math.round(16 * scale), h: Math.round(16 * scale), radius: Math.round(2 * scale), color: 0x000000 })
+    this.heartLine2 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x}, y: ${w.y}, w: 1, h: 1, color: 0x000000 })
+    this.heartLine3 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x}, y: ${w.y}, w: 1, h: 1, color: 0x000000 })
+    this.heartLine4 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x}, y: ${w.y}, w: 1, h: 1, color: 0x000000 })
+        `;
+      } else if (w.iconStyle === '3') { // Concentric Circle
+        drawIconCode = `
+    this.heartLine1 = hmUI.createWidget(hmUI.widget.ARC, { x: ${w.x}, y: ${w.y - Math.round(12 * scale)}, w: ${Math.round(24 * scale)}, h: ${Math.round(24 * scale)}, start_angle: 0, end_angle: 360, color: 0x000000, line_width: 2 })
+    this.heartLine2 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + Math.round(10 * scale)}, y: ${w.y - Math.round(4 * scale)}, w: Math.round(4 * scale), h: Math.round(8 * scale), color: 0x000000 })
+    this.heartLine3 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x}, y: ${w.y}, w: 1, h: 1, color: 0x000000 })
+    this.heartLine4 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x}, y: ${w.y}, w: 1, h: 1, color: 0x000000 })
+        `;
+      } else { // Standard ECG lines (Default)
+        drawIconCode = `
+    this.heartLine1 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x}, y: ${w.y - Math.round(2 * scale)}, w: Math.round(4 * scale), h: Math.round(2 * scale), color: 0x000000 })
+    this.heartLine2 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + Math.round(4 * scale)}, y: ${w.y - Math.round(7 * scale)}, w: Math.round(2 * scale), h: Math.round(11 * scale), color: 0x000000 })
+    this.heartLine3 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + Math.round(6 * scale)}, y: ${w.y - Math.round(1 * scale)}, w: Math.round(2 * scale), h: Math.round(7 * scale), color: 0x000000 })
+    this.heartLine4 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + Math.round(8 * scale)}, y: ${w.y - Math.round(3 * scale)}, w: Math.round(4 * scale), h: Math.round(2 * scale), color: 0x000000 })
+        `;
+      }
+
       buildWidgets += `
-    // Heart Rate Vector Icon (ECG Wave)
-    this.heartLine1 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x}, y: ${w.y - 2}, w: 4, h: 2, color: 0x000000 })
-    this.heartLine2 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + 4}, y: ${w.y - 7}, w: 2, h: 11, color: 0x000000 })
-    this.heartLine3 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + 6}, y: ${w.y - 1}, w: 2, h: 7, color: 0x000000 })
-    this.heartLine4 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + 8}, y: ${w.y - 3}, w: 4, h: 2, color: 0x000000 })
-    
-    // Heart Rate Text Widget
+    // Heart Rate Complication
+    ${drawIconCode}
     this.heartTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
-      x: ${w.x + 26},
+      x: ${w.x + textXOffset},
       y: ${w.y - 16},
       w: 74,
       h: 30,
@@ -843,26 +1055,35 @@ function generateIndexJs(config) {
       ${fontPath}
       text: ''
     })
-    
-    // Shortcut
-    hmUI.createWidget(hmUI.widget.IMG_CLICK, {
-      x: ${w.x - 5},
-      y: ${w.y - 20},
-      w: 105,
-      h: 40,
-      src: 'transparent.png',
-      type: hmUI.data_type.HEART
-    })
+    ${shortcutWidget}
       `;
     } else if (w.type === 'CAL') {
+      const scale = (w.iconSize || 24) / 24;
+      const textXOffset = Math.round(24 * scale) + 6;
+
+      let drawIconCode = '';
+      if (w.iconStyle === '2') { // Single Flame
+        drawIconCode = `
+    this.calFlame1 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + Math.round(6 * scale)}, y: ${w.y - Math.round(8 * scale)}, w: Math.round(12 * scale), h: Math.round(18 * scale), radius: Math.round(3 * scale), color: 0x000000 })
+    this.calFlame2 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x}, y: ${w.y}, w: 1, h: 1, color: 0x000000 }) // Dummy
+        `;
+      } else if (w.iconStyle === '3') { // Spark
+        drawIconCode = `
+    this.calFlame1 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + Math.round(4 * scale)}, y: ${w.y - Math.round(4 * scale)}, w: Math.round(6 * scale), h: Math.round(6 * scale), radius: Math.round(1 * scale), color: 0x000000 })
+    this.calFlame2 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + Math.round(14 * scale)}, y: ${w.y - Math.round(8 * scale)}, w: Math.round(6 * scale), h: Math.round(6 * scale), radius: Math.round(1 * scale), color: 0x000000 })
+        `;
+      } else { // Standard (Default)
+        drawIconCode = `
+    this.calFlame1 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + Math.round(6 * scale)}, y: ${w.y - Math.round(4 * scale)}, w: Math.round(6 * scale), h: Math.round(10 * scale), radius: Math.round(2 * scale), color: 0x000000 })
+    this.calFlame2 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + Math.round(9 * scale)}, y: ${w.y - Math.round(8 * scale)}, w: Math.round(4 * scale), h: Math.round(8 * scale), radius: Math.round(1 * scale), color: 0x000000 })
+        `;
+      }
+
       buildWidgets += `
-    // Calories Vector Icon (Minimal Flame)
-    this.calFlame1 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + 6}, y: ${w.y - 4}, w: 6, h: 10, radius: 2, color: 0x000000 })
-    this.calFlame2 = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + 9}, y: ${w.y - 8}, w: 4, h: 8, radius: 1, color: 0x000000 })
-    
-    // Calories Text Widget
+    // Calories Complication
+    ${drawIconCode}
     this.calTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
-      x: ${w.x + 26},
+      x: ${w.x + textXOffset},
       y: ${w.y - 16},
       w: 74,
       h: 30,
@@ -873,26 +1094,35 @@ function generateIndexJs(config) {
       ${fontPath}
       text: ''
     })
-    
-    // Shortcut
-    hmUI.createWidget(hmUI.widget.IMG_CLICK, {
-      x: ${w.x - 5},
-      y: ${w.y - 20},
-      w: 105,
-      h: 40,
-      src: 'transparent.png',
-      type: hmUI.data_type.STRESS
-    })
+    ${shortcutWidget}
       `;
     } else if (w.type === 'DISTANCE') {
+      const scale = (w.iconSize || 24) / 24;
+      const textXOffset = Math.round(24 * scale) + 6;
+
+      let drawIconCode = '';
+      if (w.iconStyle === '2') { // Pin Alone
+        drawIconCode = `
+    this.distPinCircle = hmUI.createWidget(hmUI.widget.ARC, { x: ${w.x + Math.round(4 * scale)}, y: ${w.y - Math.round(8 * scale)}, w: Math.round(16 * scale), h: Math.round(16 * scale), start_angle: 0, end_angle: 360, color: 0x000000, line_width: 2 })
+    this.distPinLine = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x}, y: ${w.y}, w: 1, h: 1, color: 0x000000 }) // Dummy
+        `;
+      } else if (w.iconStyle === '3') { // Path Loop
+        drawIconCode = `
+    this.distPinCircle = hmUI.createWidget(hmUI.widget.ARC, { x: ${w.x}, y: ${w.y - Math.round(8 * scale)}, w: Math.round(24 * scale), h: Math.round(14 * scale), start_angle: 0, end_angle: 180, color: 0x000000, line_width: 2 })
+    this.distPinLine = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + Math.round(11 * scale)}, y: ${w.y - Math.round(2 * scale)}, w: Math.round(2 * scale), h: Math.round(8 * scale), color: 0x000000 })
+        `;
+      } else { // Pin and line (Default)
+        drawIconCode = `
+    this.distPinCircle = hmUI.createWidget(hmUI.widget.ARC, { x: ${w.x + Math.round(4 * scale)}, y: ${w.y - Math.round(8 * scale)}, w: Math.round(10 * scale), h: Math.round(10 * scale), start_angle: 0, end_angle: 360, color: 0x000000, line_width: 2 })
+    this.distPinLine = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + Math.round(8 * scale)}, y: ${w.y + Math.round(1 * scale)}, w: Math.round(2 * scale), h: Math.round(5 * scale), color: 0x000000 })
+        `;
+      }
+
       buildWidgets += `
-    // Distance Vector Icon (Pin)
-    this.distPinCircle = hmUI.createWidget(hmUI.widget.ARC, { x: ${w.x + 4}, y: ${w.y - 8}, w: 10, h: 10, start_angle: 0, end_angle: 360, color: 0x000000, line_width: 2 })
-    this.distPinLine = hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + 8}, y: ${w.y + 1}, w: 2, h: 5, color: 0x000000 })
-    
-    // Distance Text Widget
+    // Distance Complication
+    ${drawIconCode}
     this.distanceTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
-      x: ${w.x + 26},
+      x: ${w.x + textXOffset},
       y: ${w.y - 16},
       w: 74,
       h: 30,
@@ -903,16 +1133,7 @@ function generateIndexJs(config) {
       ${fontPath}
       text: ''
     })
-    
-    // Shortcut
-    hmUI.createWidget(hmUI.widget.IMG_CLICK, {
-      x: ${w.x - 5},
-      y: ${w.y - 20},
-      w: 105,
-      h: 40,
-      src: 'transparent.png',
-      type: hmUI.data_type.DISTANCE
-    })
+    ${shortcutWidget}
       `;
     } else if (w.type === 'WEEKDAY') {
       buildWidgets += `
@@ -929,6 +1150,7 @@ function generateIndexJs(config) {
       ${fontPath}
       text: ''
     })
+    ${shortcutWidget}
       `;
     } else if (w.type === 'DATE') {
       buildWidgets += `
@@ -945,11 +1167,11 @@ function generateIndexJs(config) {
       ${fontPath}
       text: ''
     })
+    ${shortcutWidget}
       `;
     }
   });
 
-  // Background style insertion with Scale & Position offsets
   if (config.backgroundStyle && config.backgroundStyle !== 'none') {
     const bgScale = config.backgroundScale || 100;
     const bgX = config.backgroundX || 0;
@@ -973,7 +1195,6 @@ function generateIndexJs(config) {
     ` + buildWidgets;
   }
 
-  // Listener bindings inside setupListeners()
   let registerListeners = '';
   if (activeSensors.has('BATTERY')) registerListeners += "    this.batterySensor.addEventListener(hmSensor.event.CHANGE, updateBatteryCb)\n";
   if (activeSensors.has('STEP')) registerListeners += "    this.stepSensor.addEventListener(hmSensor.event.CHANGE, updateStepsCb)\n";
@@ -981,7 +1202,6 @@ function generateIndexJs(config) {
   if (activeSensors.has('CAL')) registerListeners += "    this.calSensor.addEventListener(hmSensor.event.CHANGE, updateCalCb)\n";
   if (activeSensors.has('DISTANCE')) registerListeners += "    this.distanceSensor.addEventListener(hmSensor.event.CHANGE, updateDistanceCb)\n";
 
-  // Update triggers inside resume_call
   let resumeUpdates = '';
   activeSensors.forEach(s => {
     if (s === 'BATTERY') resumeUpdates += '        this.updateBattery()\n';
@@ -991,16 +1211,25 @@ function generateIndexJs(config) {
     if (s === 'DISTANCE') resumeUpdates += '        this.updateDistance()\n';
   });
 
-  // Update functions definitions
   let helperUpdateFunctions = '';
   if (activeSensors.has('BATTERY')) {
+    const batWidget = widgetsList.find(x => x.type === 'BATTERY');
+    const hasBatteryArc = batWidget && batWidget.showProgress;
+    const arcUpdateCode = hasBatteryArc ? `
+    if (this.batteryArcVal) {
+      this.batteryArcVal.setProperty(hmUI.prop.MORE, {
+        end_angle: -90 + Math.round(360 * (batteryVal / 100))
+      })
+    }
+    ` : '';
+
     helperUpdateFunctions += `
   updateBattery() {
     if (!this.batteryTextWidget) return
     const batteryVal = this.batterySensor.current
     this.batteryTextWidget.setProperty(hmUI.prop.TEXT, \`\${batteryVal}%\`)
 
-    // Update battery vector fill width (max 18)
+    // Update battery fill color and width
     const w_charge = Math.round(18 * (batteryVal / 100))
     let batteryColor = 0xeaf4ff
     if (batteryVal <= ${config.batteryLow}) {
@@ -1015,16 +1244,29 @@ function generateIndexJs(config) {
         color: batteryColor
       })
     }
+    ${arcUpdateCode}
   },`;
   }
 
   if (activeSensors.has('STEP')) {
+    const stepWidget = widgetsList.find(x => x.type === 'STEP');
+    const hasStepArc = stepWidget && stepWidget.showProgress;
+    const arcUpdateCode = hasStepArc ? `
+    if (this.stepsArcVal) {
+      const stepGoalPct = Math.min(1.0, stepsVal / 10000)
+      this.stepsArcVal.setProperty(hmUI.prop.MORE, {
+        end_angle: -90 + Math.round(360 * stepGoalPct)
+      })
+    }
+    ` : '';
+
     helperUpdateFunctions += `
   updateSteps() {
     if (!this.stepsTextWidget) return
     const stepsVal = this.stepSensor.current
     const formattedSteps = stepsVal.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, ",")
     this.stepsTextWidget.setProperty(hmUI.prop.TEXT, formattedSteps)
+    ${arcUpdateCode}
   },`;
   }
 
@@ -1056,7 +1298,6 @@ function generateIndexJs(config) {
   },`;
   }
 
-  // Theme colors mapping with guard clauses
   let themeApplyColors = '';
   widgetsList.forEach(w => {
     if (w.type === 'NONE') return;
@@ -1072,6 +1313,9 @@ function generateIndexJs(config) {
     }\n`;
     } else if (w.type === 'BATTERY') {
       themeApplyColors += "    if (this.batteryTextWidget) this.batteryTextWidget.setProperty(hmUI.prop.COLOR, 0x8a90a6)\n";
+      if (w.showProgress) {
+        themeApplyColors += "    if (this.batteryArcVal) this.batteryArcVal.setProperty(hmUI.prop.COLOR, theme.line)\n";
+      }
     } else if (w.type === 'STEP') {
       themeApplyColors += `    if (this.stepsTextWidget) {
       this.stepsTextWidget.setProperty(hmUI.prop.COLOR, theme.steps)
@@ -1079,6 +1323,9 @@ function generateIndexJs(config) {
       this.stepsBar2.setProperty(hmUI.prop.COLOR, theme.line)
       this.stepsBar3.setProperty(hmUI.prop.COLOR, theme.line)
     }\n`;
+      if (w.showProgress) {
+        themeApplyColors += "    if (this.stepsArcVal) this.stepsArcVal.setProperty(hmUI.prop.COLOR, theme.line)\n";
+      }
     } else if (w.type === 'HEART') {
       themeApplyColors += `    if (this.heartTextWidget) {
       this.heartTextWidget.setProperty(hmUI.prop.COLOR, theme.line)
@@ -1113,28 +1360,28 @@ function generateIndexJs(config) {
     steps: ${config.stepsColor.replace('#', '0x')}
   },
   {
-    line: 0xff7b90,    // Strawberry Yogurt (Pantone Pastel Coral Pink)
-    minute: 0xfff0f2,  // Yogurt Cream Peach
+    line: 0xff7b90,    // Strawberry Yogurt
+    minute: 0xfff0f2,
     steps: 0xff7b90
   },
   {
-    line: 0x7cd1a1,    // Mint Pistachio (Pantone Mint Green)
-    minute: 0xf0faf4,  // Mint Milk
+    line: 0x7cd1a1,    // Mint Pistachio
+    minute: 0xf0faf4,
     steps: 0x7cd1a1
   },
   {
-    line: 0x8f9eff,    // Blueberry Lavender (Pantone Serenity Blue)
-    minute: 0xf2f4ff,  // Yogurt Lavender Milk
+    line: 0x8f9eff,    // Blueberry Lavender
+    minute: 0xf2f4ff,
     steps: 0x8f9eff
   },
   {
-    line: 0xffd670,    // Banana Cream (Pantone Soft Yellow)
-    minute: 0xfffcf2,  // Warm Vanilla Cream
+    line: 0xffd670,    // Banana Cream
+    minute: 0xfffcf2,
     steps: 0xffd670
   },
   {
-    line: 0xff9e7d,    // Soft Peach Melba (Pantone Peach Coral)
-    minute: 0xfff5f2,  // Peach Juice Milk
+    line: 0xff9e7d,    // Soft Peach Melba
+    minute: 0xfff5f2,
     steps: 0xff9e7d
   }
 ]
@@ -1142,10 +1389,8 @@ function generateIndexJs(config) {
 WatchFace({
   onInit() {
     console.log('index page.js on init invoke')
-    // Initialize sensors
     this.timeSensor = hmSensor.createSensor(hmSensor.id.TIME)
 ${onInitSensors}
-    // Retrieve saved theme index
     this.currentThemeIndex = ${config.themeIndex}
     try {
       this.currentThemeIndex = hmFS.SysProGetInt('theme_idx') !== undefined ? hmFS.SysProGetInt('theme_idx') : ${config.themeIndex}
@@ -1160,7 +1405,6 @@ ${onInitSensors}
   build() {
     console.log('index page.js on build invoke')
 
-    // 1. Draw outer subtle ring (Centered: center_x=227, center_y=227)
     hmUI.createWidget(hmUI.widget.ARC, {
       x: 12,
       y: 12,
@@ -1172,13 +1416,10 @@ ${onInitSensors}
       line_width: 1
     })
 
-    // 2. Dynamic Component Widgets
 ${buildWidgets}
-    // Apply theme colors & update data values
     this.applyThemeColors()
     this.updateTime()
 ${resumeUpdates}
-    // 14. Set up listeners and timers
     this.setupListeners()
   },
 
@@ -1197,10 +1438,8 @@ ${
 }
     // Register sensor change listeners
 ${registerListeners}
-    // Timer for time update (every second)
     this.timeTimer = timer.createTimer(0, 1000, updateTimeCb)
 
-    // Use WIDGET_DELEGATE to manage active/inactive states
     hmUI.createWidget(hmUI.widget.WIDGET_DELEGATE, {
       resume_call: () => {
         console.log('Watchface resumed')
@@ -1234,7 +1473,6 @@ ${resumeUpdates}      },
     const theme = THEMES[this.currentThemeIndex]
     
 ${themeApplyColors}
-    // Update battery fill color and width
     this.updateBattery()
   },
 
@@ -1262,7 +1500,6 @@ ${themeApplyColors}
     const monthStr = MONTH_NAMES[monthIndex] || ''
     const weekStr = WEEK_DAYS[weekIndex] || ''
 
-    // Set Weekday & Date if widgets exist
     if (this.weekdayTextWidget) {
       this.weekdayTextWidget.setProperty(hmUI.prop.TEXT, weekStr)
     }
@@ -1273,6 +1510,256 @@ ${themeApplyColors}
 ${helperUpdateFunctions}
   onDestroy() {
     console.log('index page.js on destroy invoke')
+    if (this.timeTimer) {
+      timer.stopTimer(this.timeTimer)
+      this.timeTimer = null
+    }
+  }
+})`
+}
+
+// Generate aod.js layout template code (Always-On Display)
+function generateAodJs(config) {
+  const widgetsList = config.widgets || [];
+  let buildWidgets = '';
+  const fontFilename = FONT_FILENAMES[config.fontFamily] || 'Outfit-ExtraBold.ttf';
+  const fontPath = `font: 'fonts/${fontFilename}',`;
+  const timeFontPath = `font: 'fonts/${fontFilename}',`;
+
+  widgetsList.forEach(w => {
+    if (w.type === 'NONE') return;
+
+    if (w.type === 'HOUR') {
+      buildWidgets += `
+    // Hour Widget
+    this.hourTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
+      x: ${w.x},
+      y: ${w.y - 14},
+      w: 180,
+      h: 130,
+      text_size: ${w.size},
+      color: 0x8a90a6,
+      align_h: hmUI.align.CENTER_H,
+      align_v: hmUI.align.CENTER_V,
+      ${timeFontPath}
+      text: '00'
+    })
+      `;
+    } else if (w.type === 'MINUTE') {
+      buildWidgets += `
+    // Minute Widget
+    this.minuteTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
+      x: ${w.x},
+      y: ${w.y - 14},
+      w: 180,
+      h: 130,
+      text_size: ${w.size},
+      color: 0x5c6275,
+      align_h: hmUI.align.CENTER_H,
+      align_v: hmUI.align.CENTER_V,
+      ${timeFontPath}
+      text: '00'
+    })
+      `;
+    } else if (w.type === 'DIVIDER') {
+      buildWidgets += `
+    // Divider Accent Line
+    this.centerLineWidget = hmUI.createWidget(hmUI.widget.FILL_RECT, {
+      x: ${w.x},
+      y: ${w.y},
+      w: ${w.w || 2},
+      h: ${w.h || 320},
+      color: 0x4a4e5d
+    })
+      `;
+    } else if (w.type === 'BATTERY') {
+      const scale = (w.iconSize || 24) / 24;
+      const textXOffset = w.showProgress ? 50 : Math.round(24 * scale) + 6;
+      const textYOffset = w.showProgress ? -12 : -16;
+
+      let drawIconCode = '';
+      if (w.iconStyle === '2') {
+        drawIconCode = `
+    hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x}, y: ${w.y - Math.round(12 * scale)}, w: ${Math.round(14 * scale)}, h: ${Math.round(24 * scale)}, radius: ${Math.round(2 * scale)}, color: 0x333644 })
+        `;
+      } else if (w.iconStyle === '3') {
+        drawIconCode = `
+    hmUI.createWidget(hmUI.widget.ARC, { x: ${w.x}, y: ${w.y - Math.round(12 * scale)}, w: ${Math.round(24 * scale)}, h: ${Math.round(24 * scale)}, start_angle: 0, end_angle: 360, color: 0x333644, line_width: 2 })
+        `;
+      } else {
+        drawIconCode = `
+    hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x}, y: ${w.y - Math.round(8 * scale)}, w: ${Math.round(24 * scale)}, h: ${Math.round(14 * scale)}, radius: ${Math.round(2 * scale)}, color: 0x333644 })
+        `;
+      }
+
+      buildWidgets += `
+    // Battery Complication (Dimmed AOD)
+    ${drawIconCode}
+    this.batteryTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
+      x: ${w.x + textXOffset},
+      y: ${w.y + textYOffset},
+      w: 70,
+      h: 30,
+      text_size: ${w.size},
+      color: 0x5c6275,
+      align_h: hmUI.align.LEFT,
+      align_v: hmUI.align.CENTER_V,
+      ${fontPath}
+      text: '85%'
+    })
+      `;
+    } else if (w.type === 'STEP') {
+      const scale = (w.iconSize || 24) / 24;
+      const textXOffset = w.showProgress ? 50 : Math.round(24 * scale) + 6;
+      const textYOffset = w.showProgress ? -12 : -16;
+
+      let drawIconCode = '';
+      if (w.iconStyle === '2') {
+        drawIconCode = `
+    hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x + Math.round(2 * scale)}, y: ${w.y + Math.round(2 * scale)}, w: Math.round(8 * scale)}, h: Math.round(14 * scale)}, radius: Math.round(4 * scale)}, color: 0x333644 })
+        `;
+      } else if (w.iconStyle === '3') {
+        drawIconCode = `
+    hmUI.createWidget(hmUI.widget.ARC, { x: ${w.x}, y: ${w.y - Math.round(12 * scale)}, w: ${Math.round(24 * scale)}, h: ${Math.round(24 * scale)}, start_angle: 0, end_angle: 360, color: 0x333644, line_width: 2 })
+        `;
+      } else {
+        drawIconCode = `
+    hmUI.createWidget(hmUI.widget.FILL_RECT, { x: ${w.x}, y: ${w.y + Math.round(2 * scale)}, w: Math.round(5 * scale)}, h: Math.round(4 * scale)}, color: 0x333644 })
+        `;
+      }
+
+      buildWidgets += `
+    // Steps Complication (Dimmed AOD)
+    ${drawIconCode}
+    this.stepsTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
+      x: ${w.x + textXOffset},
+      y: ${w.y + textYOffset},
+      w: 74,
+      h: 30,
+      text_size: ${w.size},
+      color: 0x5c6275,
+      align_h: hmUI.align.LEFT,
+      align_v: hmUI.align.CENTER_V,
+      ${fontPath}
+      text: '8,420'
+    })
+      `;
+    } else if (w.type === 'WEEKDAY') {
+      buildWidgets += `
+    // Weekday Widget (Dimmed AOD)
+    this.weekdayTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
+      x: ${w.x},
+      y: ${w.y - 12},
+      w: 100,
+      h: 25,
+      text_size: ${w.size},
+      color: 0x5c6275,
+      align_h: hmUI.align.CENTER_H,
+      align_v: hmUI.align.CENTER_V,
+      ${fontPath}
+      text: 'MON'
+    })
+      `;
+    } else if (w.type === 'DATE') {
+      buildWidgets += `
+    // Date Widget (Dimmed AOD)
+    this.monthDayTextWidget = hmUI.createWidget(hmUI.widget.TEXT, {
+      x: ${w.x},
+      y: ${w.y - 12},
+      w: 100,
+      h: 25,
+      text_size: ${w.size},
+      color: 0x5c6275,
+      align_h: hmUI.align.CENTER_H,
+      align_v: hmUI.align.CENTER_V,
+      ${fontPath}
+      text: 'JUL 16'
+    })
+      `;
+    }
+  });
+
+  return `WatchFace({
+  onInit() {
+    console.log('aod page.js on init invoke')
+    this.timeSensor = hmSensor.createSensor(hmSensor.id.TIME)
+  },
+
+  build() {
+    console.log('aod page.js on build invoke')
+    
+    // Outer boundary ring
+    hmUI.createWidget(hmUI.widget.ARC, {
+      x: 12,
+      y: 12,
+      w: 430,
+      h: 430,
+      start_angle: 0,
+      end_angle: 360,
+      color: 0x11131a,
+      line_width: 1
+    })
+
+${buildWidgets}
+    this.updateTime()
+    this.setupListeners()
+  },
+
+  setupListeners() {
+    const updateTimeCb = () => this.updateTime()
+    // Timer updates every 60 seconds inside AOD mode to conserve battery
+    this.timeTimer = timer.createTimer(0, 60000, updateTimeCb)
+
+    hmUI.createWidget(hmUI.widget.WIDGET_DELEGATE, {
+      resume_call: () => {
+        if (!this.timeTimer) {
+          this.timeTimer = timer.createTimer(0, 60000, updateTimeCb)
+        }
+        this.updateTime()
+      },
+      pause_call: () => {
+        if (this.timeTimer) {
+          timer.stopTimer(this.timeTimer)
+          this.timeTimer = null
+        }
+      }
+    })
+  },
+
+  updateTime() {
+    const hour = this.timeSensor.hour
+    const minute = this.timeSensor.minute
+    
+    const hh = hour < 10 ? '0' + hour : '' + hour
+    const mm = minute < 10 ? '0' + minute : '' + minute
+
+    if (this.hourTextWidget) {
+      this.hourTextWidget.setProperty(hmUI.prop.TEXT, hh)
+    }
+    if (this.minuteTextWidget) {
+      this.minuteTextWidget.setProperty(hmUI.prop.TEXT, mm)
+    }
+
+    const WEEK_DAYS = ['', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
+    const MONTH_NAMES = ['', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+
+    const day = this.timeSensor.day
+    const monthIndex = this.timeSensor.month
+    const weekIndex = this.timeSensor.week
+
+    const monthStr = MONTH_NAMES[monthIndex] || ''
+    const weekStr = WEEK_DAYS[weekIndex] || ''
+
+    if (this.weekdayTextWidget) {
+      this.weekdayTextWidget.setProperty(hmUI.prop.TEXT, weekStr)
+    }
+    if (this.monthDayTextWidget) {
+      this.monthDayTextWidget.setProperty(hmUI.prop.TEXT, \`\${monthStr} \${day}\`)
+    }
+  },
+
+  onDestroy() {
+    console.log('aod page.js on destroy invoke')
     if (this.timeTimer) {
       timer.stopTimer(this.timeTimer)
       this.timeTimer = null

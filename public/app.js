@@ -49,6 +49,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const inspectColor = document.getElementById('inspectColor');
   const inspectCustomColorContainer = document.getElementById('inspectCustomColorContainer');
   const inspectCustomColor = document.getElementById('inspectCustomColor');
+  
+  const inspectIconStyleContainer = document.getElementById('inspectIconStyleContainer');
+  const inspectIconStyle = document.getElementById('inspectIconStyle');
+  const inspectIconSizeContainer = document.getElementById('inspectIconSizeContainer');
+  const inspectIconSize = document.getElementById('inspectIconSize');
+  const inspectValIconSize = document.getElementById('inspectValIconSize');
+  const inspectProgressRingContainer = document.getElementById('inspectProgressRingContainer');
+  const inspectProgressRing = document.getElementById('inspectProgressRing');
+  const inspectShortcut = document.getElementById('inspectShortcut');
 
   // Action Buttons
   const btnSave = document.getElementById('btnSave');
@@ -65,6 +74,11 @@ document.addEventListener('DOMContentLoaded', () => {
   let activeDragWidget = null;
   const dragOffset = { x: 0, y: 0 };
   const scale = 0.687; // Scale factor matching CSS transform
+
+  // Undo/Redo & AOD State
+  const undoStack = [];
+  const redoStack = [];
+  let isAodMode = false;
 
   const PRESETS = [
     { primary: '#ff5a36', secondary: '#eaf4ff' },
@@ -106,40 +120,69 @@ document.addEventListener('DOMContentLoaded', () => {
 
       updateGlobalStyles();
       renderAll();
+      pushState();
     })
     .catch(err => console.error('Failed to load initial config:', err));
 
   // Global Config Listeners
   fontFamilySelect.addEventListener('change', () => {
     updateGlobalStyles();
+    pushState();
   });
 
   backgroundStyleSelect.addEventListener('change', () => {
     updateGlobalStyles();
+    pushState();
   });
 
   bgScaleInput.addEventListener('input', () => {
     updateGlobalStyles();
   });
+  bgScaleInput.addEventListener('change', () => {
+    pushState();
+  });
+
   bgXInput.addEventListener('input', () => {
     updateGlobalStyles();
   });
+  bgXInput.addEventListener('change', () => {
+    pushState();
+  });
+
   bgYInput.addEventListener('input', () => {
     updateGlobalStyles();
   });
+  bgYInput.addEventListener('change', () => {
+    pushState();
+  });
+
   bgSpacingInput.addEventListener('input', () => {
     updateGlobalStyles();
   });
+  bgSpacingInput.addEventListener('change', () => {
+    pushState();
+  });
+
   bgOpacityInput.addEventListener('input', () => {
     updateGlobalStyles();
   });
+  bgOpacityInput.addEventListener('change', () => {
+    pushState();
+  });
+
   bgRotationInput.addEventListener('input', () => {
     updateGlobalStyles();
+  });
+  bgRotationInput.addEventListener('change', () => {
+    pushState();
   });
 
   colorGlobalPrimary.addEventListener('input', () => {
     updateGlobalStyles();
     presetButtons.forEach(btn => btn.classList.remove('active'));
+  });
+  colorGlobalPrimary.addEventListener('change', () => {
+    pushState();
   });
 
   presetButtons.forEach(btn => {
@@ -152,6 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
       colorGlobalPrimary.value = presetColors.primary;
       
       updateGlobalStyles();
+      pushState();
     });
   });
 
@@ -159,11 +203,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const primary = colorGlobalPrimary.value;
     const secondary = PRESETS[currentThemeIndex].secondary;
 
-    document.documentElement.style.setProperty('--primary-color', primary);
-    document.documentElement.style.setProperty('--secondary-color', secondary);
+    if (isAodMode) {
+      // AOD style: dim colors (low brightness grayscale or dark slate/grey)
+      document.documentElement.style.setProperty('--primary-color', '#8a90a6');
+      document.documentElement.style.setProperty('--secondary-color', '#5c6275');
+    } else {
+      document.documentElement.style.setProperty('--primary-color', primary);
+      document.documentElement.style.setProperty('--secondary-color', secondary);
+    }
 
     // Apply custom font classes
     wfPreview.className = 'watch-face';
+    if (isAodMode) wfPreview.classList.add('aod-mode');
     const font = fontFamilySelect.value;
     if (font === 'Orbitron') wfPreview.classList.add('wf-font-orbitron');
     else if (font === 'Share Tech Mono') wfPreview.classList.add('wf-font-share');
@@ -179,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
     valBgOpacity.textContent = `${bgOpacityInput.value}%`;
     valBgRotation.textContent = `${bgRotationInput.value}°`;
 
-    if (bg === 'none') {
+    if (bg === 'none' || isAodMode) {
       wfBackground.style.backgroundImage = 'none';
       wfBackground.style.backgroundColor = '#000000';
       wfBackground.style.transform = 'none';
@@ -215,6 +266,9 @@ document.addEventListener('DOMContentLoaded', () => {
       return { w: widget.w || 2, h: widget.h || 320 };
     }
     if (['BATTERY', 'STEP', 'HEART', 'CAL', 'DISTANCE'].includes(widget.type)) {
+      if (widget.showProgress) {
+        return { w: 120, h: 44 };
+      }
       return { w: 100, h: 30 };
     }
     if (['WEEKDAY', 'DATE'].includes(widget.type)) {
@@ -225,9 +279,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Render widget markup inside simulator
   function getWidgetHTML(widget) {
-    const isStepsOrHeartOrCalOrDist = ['STEP', 'HEART', 'CAL', 'DISTANCE'].includes(widget.type);
     const color = widget.color === 'primary' ? 'var(--primary-color)' : (widget.color === 'secondary' ? 'var(--secondary-color)' : widget.customColor || 'var(--text-primary)');
-    
+    const iconSize = widget.iconSize || 24;
+    const iconStyle = widget.iconStyle || '1';
+
     if (widget.type === 'HOUR') {
       return `<div style="color: ${color}; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: ${widget.size}px;">10</div>`;
     }
@@ -237,61 +292,99 @@ document.addEventListener('DOMContentLoaded', () => {
     if (widget.type === 'DIVIDER') {
       return `<div style="width: 100%; height: 100%; background-color: ${color};"></div>`;
     }
+
+    // Generate dynamic icon vector HTML based on style and scale
+    let iconHTML = '';
     if (widget.type === 'BATTERY') {
+      if (iconStyle === '1') {
+        iconHTML = `<div class="wf-vector-icon icon-battery" style="width: ${iconSize}px; height: ${iconSize * 0.6}px;"><div class="fill" style="background-color: ${color};"></div><div class="tip" style="background-color: ${color};"></div></div>`;
+      } else if (iconStyle === '2') {
+        iconHTML = `<div class="wf-vector-icon" style="width: ${iconSize * 0.6}px; height: ${iconSize}px; border: 2px solid ${color}; border-radius: 2px; position: relative; display: flex; align-items: flex-end; box-sizing: border-box;"><div class="fill" style="width: 100%; height: 75%; background-color: ${color};"></div><div class="tip" style="width: 50%; height: 2px; background-color: ${color}; position: absolute; top: -4px; left: 25%;"></div></div>`;
+      } else {
+        iconHTML = `<div class="wf-vector-icon" style="width: ${iconSize}px; height: ${iconSize}px; display: flex; align-items: center; justify-content: center; color: ${color}; font-size: ${iconSize * 0.8}px; line-height: 1;">⚡</div>`;
+      }
+    }
+    else if (widget.type === 'STEP') {
+      if (iconStyle === '1') {
+        iconHTML = `<div class="wf-vector-icon icon-steps" style="width: ${iconSize}px; height: ${iconSize}px;"><div class="bar bar-1" style="background-color: ${color};"></div><div class="bar bar-2" style="background-color: ${color};"></div><div class="bar bar-3" style="background-color: ${color};"></div></div>`;
+      } else if (iconStyle === '2') {
+        iconHTML = `<div class="wf-vector-icon" style="width: ${iconSize}px; height: ${iconSize}px; position: relative;"><div style="width: 35%; height: 60%; border-radius: 50% 50% 40% 40%; background-color: ${color}; position: absolute; left: 10%; bottom: 10%; transform: rotate(-15deg);"></div><div style="width: 35%; height: 60%; border-radius: 50% 50% 40% 40%; background-color: ${color}; position: absolute; right: 10%; top: 10%; transform: rotate(15deg);"></div></div>`;
+      } else {
+        iconHTML = `<div class="wf-vector-icon" style="width: ${iconSize}px; height: ${iconSize}px; display: flex; align-items: center; justify-content: center; font-size: ${iconSize * 0.9}px; line-height: 1;">🏃</div>`;
+      }
+    }
+    else if (widget.type === 'HEART') {
+      if (iconStyle === '1') {
+        iconHTML = `<div class="wf-vector-icon icon-heart" style="width: ${iconSize}px; height: ${iconSize}px;"><div class="line l-1" style="background-color: ${color};"></div><div class="line l-2" style="background-color: ${color};"></div><div class="line l-3" style="background-color: ${color};"></div><div class="line l-4" style="background-color: ${color};"></div></div>`;
+      } else if (iconStyle === '2') {
+        iconHTML = `<div class="wf-vector-icon" style="width: ${iconSize}px; height: ${iconSize}px; display: flex; align-items: center; justify-content: center; color: ${color}; font-size: ${iconSize * 0.9}px; line-height: 1;">❤️</div>`;
+      } else {
+        iconHTML = `<div class="wf-vector-icon" style="width: ${iconSize}px; height: ${iconSize}px; display: flex; align-items: center; justify-content: center; position: relative;"><div style="color: ${color}; font-size: ${iconSize * 0.6}px; z-index: 2; line-height: 1;">❤️</div><div style="width: 90%; height: 90%; border: 1.5px solid ${color}; border-radius: 50%; position: absolute; z-index: 1; opacity: 0.5; box-sizing: border-box;"></div></div>`;
+      }
+    }
+    else if (widget.type === 'CAL') {
+      if (iconStyle === '1') {
+        iconHTML = `<div class="wf-vector-icon icon-calorie" style="width: ${iconSize}px; height: ${iconSize}px;"><div class="f-1" style="background-color: ${color};"></div><div class="f-2" style="background-color: ${color};"></div></div>`;
+      } else if (iconStyle === '2') {
+        iconHTML = `<div class="wf-vector-icon" style="width: ${iconSize}px; height: ${iconSize}px; display: flex; align-items: center; justify-content: center; font-size: ${iconSize * 0.9}px; line-height: 1;">🔥</div>`;
+      } else {
+        iconHTML = `<div class="wf-vector-icon" style="width: ${iconSize}px; height: ${iconSize}px; display: flex; align-items: center; justify-content: center; font-size: ${iconSize * 0.9}px; line-height: 1;">✨</div>`;
+      }
+    }
+    else if (widget.type === 'DISTANCE') {
+      if (iconStyle === '1') {
+        iconHTML = `<div class="wf-vector-icon icon-distance" style="width: ${iconSize}px; height: ${iconSize}px;"><div class="circle" style="border-color: ${color};"></div><div class="line" style="background-color: ${color};"></div></div>`;
+      } else if (iconStyle === '2') {
+        iconHTML = `<div class="wf-vector-icon" style="width: ${iconSize}px; height: ${iconSize}px; display: flex; align-items: center; justify-content: center; font-size: ${iconSize * 0.9}px; line-height: 1;">📍</div>`;
+      } else {
+        iconHTML = `<div class="wf-vector-icon" style="width: ${iconSize}px; height: ${iconSize}px; display: flex; align-items: center; justify-content: center; font-size: ${iconSize * 0.9}px; line-height: 1;">🛣️</div>`;
+      }
+    }
+
+    // Get Label Text
+    let labelVal = '';
+    if (widget.type === 'BATTERY') labelVal = '85%';
+    else if (widget.type === 'STEP') labelVal = '8,420';
+    else if (widget.type === 'HEART') labelVal = '72 bpm';
+    else if (widget.type === 'CAL') labelVal = '340 kcal';
+    else if (widget.type === 'DISTANCE') labelVal = '4.2 km';
+    else if (widget.type === 'WEEKDAY') return `<span class="wf-widget-label" style="color: ${color}; font-size: ${widget.size}px; width: 100%; text-align: center;">MON</span>`;
+    else if (widget.type === 'DATE') return `<span class="wf-widget-label" style="color: ${color}; font-size: ${widget.size}px; width: 100%; text-align: center;">JUL 16</span>`;
+
+    const labelHTML = `<span class="wf-widget-label" style="color: ${color}; font-size: ${widget.size}px;">${labelVal}</span>`;
+
+    // Wrap in Progress Ring if enabled
+    if (widget.showProgress && ['BATTERY', 'STEP', 'HEART', 'CAL', 'DISTANCE'].includes(widget.type)) {
+      const ringSize = 44;
+      const strokeWidth = 3;
+      const radius = (ringSize - strokeWidth) / 2;
+      const circumference = 2 * Math.PI * radius;
+      
+      let progressPct = 0.75;
+      if (widget.type === 'BATTERY') progressPct = 0.85;
+      else if (widget.type === 'STEP') progressPct = 0.65;
+      else if (widget.type === 'HEART') progressPct = 0.72;
+      else if (widget.type === 'CAL') progressPct = 0.45;
+      const strokeDashoffset = circumference * (1 - progressPct);
+
       return `
-        <div class="wf-vector-icon icon-battery">
-          <div class="fill"></div>
-          <div class="tip"></div>
+        <div style="display: flex; align-items: center; gap: 8px; position: relative;">
+          <div style="width: ${ringSize}px; height: ${ringSize}px; position: relative; display: flex; align-items: center; justify-content: center;">
+            <svg width="${ringSize}" height="${ringSize}" style="position: absolute; transform: rotate(-90deg); top: 0; left: 0;">
+              <circle cx="${ringSize/2}" cy="${ringSize/2}" r="${radius}" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="${strokeWidth}"/>
+              <circle cx="${ringSize/2}" cy="${ringSize/2}" r="${radius}" fill="none" stroke="${color}" stroke-width="${strokeWidth}" 
+                stroke-dasharray="${circumference}" stroke-dashoffset="${strokeDashoffset}" stroke-linecap="round"/>
+            </svg>
+            <div style="position: relative; z-index: 2; display: flex; align-items: center; justify-content: center;">
+              ${iconHTML}
+            </div>
+          </div>
+          ${labelHTML}
         </div>
-        <span class="wf-widget-label" style="color: ${color}; font-size: ${widget.size}px;">85%</span>
       `;
     }
-    if (widget.type === 'STEP') {
-      return `
-        <div class="wf-vector-icon icon-steps">
-          <div class="bar bar-1"></div>
-          <div class="bar bar-2"></div>
-          <div class="bar bar-3"></div>
-        </div>
-        <span class="wf-widget-label" style="color: ${color}; font-size: ${widget.size}px;">8.4K</span>
-      `;
-    }
-    if (widget.type === 'HEART') {
-      return `
-        <div class="wf-vector-icon icon-heart">
-          <div class="line l-1"></div>
-          <div class="line l-2"></div>
-          <div class="line l-3"></div>
-          <div class="line l-4"></div>
-        </div>
-        <span class="wf-widget-label" style="color: ${color}; font-size: ${widget.size}px;">72 bpm</span>
-      `;
-    }
-    if (widget.type === 'CAL') {
-      return `
-        <div class="wf-vector-icon icon-calorie">
-          <div class="f-1"></div>
-          <div class="f-2"></div>
-        </div>
-        <span class="wf-widget-label" style="color: ${color}; font-size: ${widget.size}px;">340 kcal</span>
-      `;
-    }
-    if (widget.type === 'DISTANCE') {
-      return `
-        <div class="wf-vector-icon icon-distance">
-          <div class="circle"></div>
-          <div class="line"></div>
-        </div>
-        <span class="wf-widget-label" style="color: ${color}; font-size: ${widget.size}px;">4.2 km</span>
-      `;
-    }
-    if (widget.type === 'WEEKDAY') {
-      return `<span class="wf-widget-label" style="color: ${color}; font-size: ${widget.size}px; width: 100%; text-align: center;">MON</span>`;
-    }
-    if (widget.type === 'DATE') {
-      return `<span class="wf-widget-label" style="color: ${color}; font-size: ${widget.size}px; width: 100%; text-align: center;">JUL 13</span>`;
-    }
-    return '';
+
+    return `${iconHTML} ${labelHTML}`;
   }
 
   // Draw all widgets in DOM
@@ -396,6 +489,30 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       inspectCustomColorContainer.style.display = 'none';
     }
+
+    // Complications: Icon styling & Progress Ring
+    const isComplication = ['BATTERY', 'STEP', 'HEART', 'CAL', 'DISTANCE'].includes(widget.type);
+    if (isComplication) {
+      inspectIconStyleContainer.style.display = 'block';
+      inspectIconStyle.value = widget.iconStyle || '1';
+      inspectIconSizeContainer.style.display = 'block';
+      inspectIconSize.value = widget.iconSize || 24;
+      inspectValIconSize.textContent = `${inspectIconSize.value}px`;
+
+      if (['BATTERY', 'STEP'].includes(widget.type)) {
+        inspectProgressRingContainer.style.display = 'block';
+        inspectProgressRing.checked = widget.showProgress || false;
+      } else {
+        inspectProgressRingContainer.style.display = 'none';
+      }
+    } else {
+      inspectIconStyleContainer.style.display = 'none';
+      inspectIconSizeContainer.style.display = 'none';
+      inspectProgressRingContainer.style.display = 'none';
+    }
+
+    // Shortcut target
+    inspectShortcut.value = widget.shortcut || 'DEFAULT';
   }
 
   // Properties form event handlers
@@ -407,6 +524,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderAll();
     }
   });
+  inspectX.addEventListener('change', () => { pushState(); });
 
   inspectY.addEventListener('input', (e) => {
     if (!selectedWidgetId) return;
@@ -416,6 +534,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderAll();
     }
   });
+  inspectY.addEventListener('change', () => { pushState(); });
 
   inspectSize.addEventListener('input', (e) => {
     if (!selectedWidgetId) return;
@@ -426,6 +545,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderAll();
     }
   });
+  inspectSize.addEventListener('change', () => { pushState(); });
 
   inspectWidth.addEventListener('input', (e) => {
     if (!selectedWidgetId) return;
@@ -435,6 +555,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderAll();
     }
   });
+  inspectWidth.addEventListener('change', () => { pushState(); });
 
   inspectHeight.addEventListener('input', (e) => {
     if (!selectedWidgetId) return;
@@ -444,6 +565,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderAll();
     }
   });
+  inspectHeight.addEventListener('change', () => { pushState(); });
 
   inspectColor.addEventListener('change', (e) => {
     if (!selectedWidgetId) return;
@@ -453,7 +575,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (w.color === 'custom') {
         w.customColor = inspectCustomColor.value;
       }
+      inspectCustomColorContainer.style.display = w.color === 'custom' ? 'block' : 'none';
       renderAll();
+      pushState();
     }
   });
 
@@ -463,6 +587,48 @@ document.addEventListener('DOMContentLoaded', () => {
     if (w && w.color === 'custom') {
       w.customColor = e.target.value;
       renderAll();
+    }
+  });
+  inspectCustomColor.addEventListener('change', () => { pushState(); });
+
+  inspectIconStyle.addEventListener('change', (e) => {
+    if (!selectedWidgetId) return;
+    const w = widgets.find(x => x.id === selectedWidgetId);
+    if (w) {
+      w.iconStyle = e.target.value;
+      renderAll();
+      pushState();
+    }
+  });
+
+  inspectIconSize.addEventListener('input', (e) => {
+    if (!selectedWidgetId) return;
+    const w = widgets.find(x => x.id === selectedWidgetId);
+    if (w) {
+      w.iconSize = parseInt(e.target.value) || 24;
+      inspectValIconSize.textContent = `${w.iconSize}px`;
+      renderAll();
+    }
+  });
+  inspectIconSize.addEventListener('change', () => { pushState(); });
+
+  inspectProgressRing.addEventListener('change', (e) => {
+    if (!selectedWidgetId) return;
+    const w = widgets.find(x => x.id === selectedWidgetId);
+    if (w) {
+      w.showProgress = e.target.checked;
+      renderAll();
+      pushState();
+    }
+  });
+
+  inspectShortcut.addEventListener('change', (e) => {
+    if (!selectedWidgetId) return;
+    const w = widgets.find(x => x.id === selectedWidgetId);
+    if (w) {
+      w.shortcut = e.target.value;
+      renderAll();
+      pushState();
     }
   });
 
@@ -777,5 +943,103 @@ document.addEventListener('DOMContentLoaded', () => {
         btnSave.disabled = false;
         buildLoader.style.display = 'none';
       });
+  });
+
+  // --- Undo/Redo & AOD Preview Engine ---
+
+  function pushState() {
+    const state = JSON.stringify({
+      themeIndex: currentThemeIndex,
+      hourColor: colorGlobalPrimary.value,
+      fontFamily: fontFamilySelect.value,
+      appName: appNameInput.value,
+      appId: appIdInput.value,
+      backgroundStyle: backgroundStyleSelect.value,
+      backgroundScale: bgScaleInput.value,
+      backgroundX: bgXInput.value,
+      backgroundY: bgYInput.value,
+      backgroundSpacing: bgSpacingInput.value,
+      backgroundOpacity: bgOpacityInput.value,
+      backgroundRotation: bgRotationInput.value,
+      widgets: JSON.parse(JSON.stringify(widgets))
+    });
+    
+    if (undoStack.length === 0 || undoStack[undoStack.length - 1] !== state) {
+      undoStack.push(state);
+      if (undoStack.length > 50) undoStack.shift();
+      redoStack.length = 0; // Clear redo history on new action
+    }
+  }
+
+  function applyState(state) {
+    currentThemeIndex = state.themeIndex;
+    colorGlobalPrimary.value = state.hourColor;
+    fontFamilySelect.value = state.fontFamily;
+    appNameInput.value = state.appName;
+    appIdInput.value = state.appId;
+    backgroundStyleSelect.value = state.backgroundStyle;
+    bgScaleInput.value = state.backgroundScale;
+    bgXInput.value = state.backgroundX;
+    bgYInput.value = state.backgroundY;
+    bgSpacingInput.value = state.backgroundSpacing;
+    bgOpacityInput.value = state.backgroundOpacity;
+    bgRotationInput.value = state.backgroundRotation;
+    
+    widgets = state.widgets;
+
+    presetButtons.forEach(btn => {
+      btn.classList.toggle('active', parseInt(btn.dataset.preset) === currentThemeIndex);
+    });
+
+    updateGlobalStyles();
+    renderAll();
+  }
+
+  // Undo button click
+  document.getElementById('btnUndo').addEventListener('click', () => {
+    if (undoStack.length > 1) {
+      const currentState = undoStack.pop();
+      redoStack.push(currentState);
+      const prevState = undoStack[undoStack.length - 1];
+      applyState(JSON.parse(prevState));
+    }
+  });
+
+  // Redo button click
+  document.getElementById('btnRedo').addEventListener('click', () => {
+    if (redoStack.length > 0) {
+      const nextState = JSON.parse(redoStack.pop());
+      undoStack.push(JSON.stringify(nextState));
+      applyState(nextState);
+    }
+  });
+
+  // Keyboard binds (Ctrl+Z / Ctrl+Y)
+  window.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key.toLowerCase() === 'z') {
+      e.preventDefault();
+      document.getElementById('btnUndo').click();
+    }
+    if (e.ctrlKey && e.key.toLowerCase() === 'y') {
+      e.preventDefault();
+      document.getElementById('btnRedo').click();
+    }
+  });
+
+  // AOD Mode Toggle
+  const btnToggleAod = document.getElementById('btnToggleAod');
+  btnToggleAod.addEventListener('click', () => {
+    isAodMode = !isAodMode;
+    if (isAodMode) {
+      btnToggleAod.textContent = '☀️ Awake Mode';
+      btnToggleAod.classList.add('btn-primary');
+      btnToggleAod.classList.remove('btn-secondary');
+    } else {
+      btnToggleAod.textContent = '🌙 AOD Mode';
+      btnToggleAod.classList.add('btn-secondary');
+      btnToggleAod.classList.remove('btn-primary');
+    }
+    updateGlobalStyles();
+    renderAll();
   });
 });
