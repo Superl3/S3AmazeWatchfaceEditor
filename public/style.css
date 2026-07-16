@@ -120,6 +120,7 @@ body {
 
 .simulator-wrapper {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   background: radial-gradient(circle, rgba(20, 24, 33, 0.8) 0%, rgba(10, 12, 16, 0.95) 100%);
