@@ -303,11 +303,11 @@ app.post('/api/build', (req, res) => {
         return;
       }
       
-      if (attempts >= 150) { // 30 seconds timeout
+      if (attempts >= 300) { // 60 seconds timeout
         clearInterval(checkInterval);
         return res.status(500).json({ 
           error: 'Timeout waiting for QR code generation', 
-          details: 'The compile process took longer than 30 seconds due to PNG asset conversion. Please click compile again; the assets are now cached and it will finish immediately.' 
+          details: 'The compile process took longer than 60 seconds due to PNG asset conversion. Please click compile again; the assets are now cached and it will finish immediately.' 
         });
       }
     }, 200);
@@ -1532,9 +1532,7 @@ function generateIndexJs(config) {
 
     if (w.type === 'DIVIDER') {
       themeApplyColors += `    if (this.centerLineWidget) {
-      this.centerLineWidget.setProperty(hmUI.prop.MORE, {
-        color: theme.line
-      })
+      this.centerLineWidget.setProperty(hmUI.prop.COLOR, theme.line)
     }\n`;
     } else if (w.type === 'BATTERY') {
       themeApplyColors += `    if (this.batteryOutline) this.batteryOutline.setProperty(hmUI.prop.COLOR, theme.line)
@@ -1753,35 +1751,41 @@ function generateAodJs(config) {
 
     if (w.type === 'HOUR') {
       buildWidgets += `
-    // Hour Widget (AOD)
-    this.hourTextWidget = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
-      x: ${w.x},
-      y: ${w.y - 14},
-      w: 180,
-      h: 130,
-      font_array: [
-        'h_\${this.currentThemeIndex}_0.png', 'h_\${this.currentThemeIndex}_1.png', 'h_\${this.currentThemeIndex}_2.png', 'h_\${this.currentThemeIndex}_3.png', 'h_\${this.currentThemeIndex}_4.png',
-        'h_\${this.currentThemeIndex}_5.png', 'h_\${this.currentThemeIndex}_6.png', 'h_\${this.currentThemeIndex}_7.png', 'h_\${this.currentThemeIndex}_8.png', 'h_\${this.currentThemeIndex}_9.png'
-      ],
-      h_space: 2,
-      text: '00'
-    })
+    // Hour Widgets (AOD - one per theme)
+    this.hourTextWidgets = []
+    for (let i = 0; i < THEMES.length; i++) {
+      this.hourTextWidgets.push(hmUI.createWidget(hmUI.widget.TEXT_IMG, {
+        x: ${w.x},
+        y: ${w.y - 14},
+        w: 180,
+        h: 130,
+        font_array: [
+          'h_' + i + '_0.png', 'h_' + i + '_1.png', 'h_' + i + '_2.png', 'h_' + i + '_3.png', 'h_' + i + '_4.png',
+          'h_' + i + '_5.png', 'h_' + i + '_6.png', 'h_' + i + '_7.png', 'h_' + i + '_8.png', 'h_' + i + '_9.png'
+        ],
+        h_space: 2,
+        text: '00'
+      }))
+    }
       `;
     } else if (w.type === 'MINUTE') {
       buildWidgets += `
-    // Minute Widget (AOD)
-    this.minuteTextWidget = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
-      x: ${w.x},
-      y: ${w.y - 14},
-      w: 180,
-      h: 130,
-      font_array: [
-        'm_\${this.currentThemeIndex}_0.png', 'm_\${this.currentThemeIndex}_1.png', 'm_\${this.currentThemeIndex}_2.png', 'm_\${this.currentThemeIndex}_3.png', 'm_\${this.currentThemeIndex}_4.png',
-        'm_\${this.currentThemeIndex}_5.png', 'm_\${this.currentThemeIndex}_6.png', 'm_\${this.currentThemeIndex}_7.png', 'm_\${this.currentThemeIndex}_8.png', 'm_\${this.currentThemeIndex}_9.png'
-      ],
-      h_space: 2,
-      text: '00'
-    })
+    // Minute Widgets (AOD - one per theme)
+    this.minuteTextWidgets = []
+    for (let i = 0; i < THEMES.length; i++) {
+      this.minuteTextWidgets.push(hmUI.createWidget(hmUI.widget.TEXT_IMG, {
+        x: ${w.x},
+        y: ${w.y - 14},
+        w: 180,
+        h: 130,
+        font_array: [
+          'm_' + i + '_0.png', 'm_' + i + '_1.png', 'm_' + i + '_2.png', 'm_' + i + '_3.png', 'm_' + i + '_4.png',
+          'm_' + i + '_5.png', 'm_' + i + '_6.png', 'm_' + i + '_7.png', 'm_' + i + '_8.png', 'm_' + i + '_9.png'
+        ],
+        h_space: 2,
+        text: '00'
+      }))
+    }
       `;
     } else if (w.type === 'DIVIDER') {
       buildWidgets += `
@@ -1891,26 +1895,15 @@ ${buildWidgets}
   applyThemeColors() {
     const t = this.currentThemeIndex
     const theme = THEMES[t]
-    if (this.hourTextWidget) {
-      this.hourTextWidget.setProperty(hmUI.prop.MORE, {
-        font_array: [
-          'h_' + t + '_0.png', 'h_' + t + '_1.png', 'h_' + t + '_2.png', 'h_' + t + '_3.png', 'h_' + t + '_4.png',
-          'h_' + t + '_5.png', 'h_' + t + '_6.png', 'h_' + t + '_7.png', 'h_' + t + '_8.png', 'h_' + t + '_9.png'
-        ]
-      })
+    
+    for (let i = 0; i < THEMES.length; i++) {
+      const visible = (i === t)
+      if (this.hourTextWidgets && this.hourTextWidgets[i]) this.hourTextWidgets[i].setProperty(hmUI.prop.VISIBLE, visible)
+      if (this.minuteTextWidgets && this.minuteTextWidgets[i]) this.minuteTextWidgets[i].setProperty(hmUI.prop.VISIBLE, visible)
     }
-    if (this.minuteTextWidget) {
-      this.minuteTextWidget.setProperty(hmUI.prop.MORE, {
-        font_array: [
-          'm_' + t + '_0.png', 'm_' + t + '_1.png', 'm_' + t + '_2.png', 'm_' + t + '_3.png', 'm_' + t + '_4.png',
-          'm_' + t + '_5.png', 'm_' + t + '_6.png', 'm_' + t + '_7.png', 'm_' + t + '_8.png', 'm_' + t + '_9.png'
-        ]
-      })
-    }
+
     if (this.centerLineWidget) {
-      this.centerLineWidget.setProperty(hmUI.prop.MORE, {
-        color: theme.line
-      })
+      this.centerLineWidget.setProperty(hmUI.prop.COLOR, theme.line)
     }
   },
 
@@ -1921,11 +1914,15 @@ ${buildWidgets}
     const hh = hour < 10 ? '0' + hour : '' + hour
     const mm = minute < 10 ? '0' + minute : '' + minute
 
-    if (this.hourTextWidget) {
-      this.hourTextWidget.setProperty(hmUI.prop.TEXT, hh)
+    if (this.hourTextWidgets) {
+      for (let i = 0; i < THEMES.length; i++) {
+        if (this.hourTextWidgets[i]) this.hourTextWidgets[i].setProperty(hmUI.prop.TEXT, hh)
+      }
     }
-    if (this.minuteTextWidget) {
-      this.minuteTextWidget.setProperty(hmUI.prop.TEXT, mm)
+    if (this.minuteTextWidgets) {
+      for (let i = 0; i < THEMES.length; i++) {
+        if (this.minuteTextWidgets[i]) this.minuteTextWidgets[i].setProperty(hmUI.prop.TEXT, mm)
+      }
     }
   },
 
@@ -1955,19 +1952,29 @@ async function generateAllFontAssets(config) {
   const assetsDir = path.join(__dirname, 'test_wf', 'assets', '454x454-amazfit-gtr-3');
 
   const renderDigits = async (prefixName, size, colorHex) => {
-    // Calculate canvas size relative to font size
-    const canvasW = Math.round(size * 1.1);
-    const canvasH = Math.round(size * 1.3);
     const fontSize = Math.round(size * 0.9);
-    const baselineY = Math.round(size * 1.05);
-    const startX = Math.round(size * 0.1);
+    
+    // Create a temporary canvas/context to measure character widths
+    const tempImg = PImage.make(1, 1);
+    const tempCtx = tempImg.getContext('2d');
+    tempCtx.font = `${fontSize}pt ${fontName}`;
 
     for (let i = 0; i <= 9; i++) {
+      const charStr = i.toString();
+      const metrics = PImage.measureText(tempCtx, charStr);
+      
+      const paddingX = 4; // Add 4px padding (2 on each side) to prevent clipping
+      const canvasW = Math.ceil(metrics.width) + paddingX;
+      const canvasH = Math.round(size * 1.3);
+      const baselineY = Math.round(size * 1.05);
+      const startX = Math.round(paddingX / 2);
+
       const img = PImage.make(canvasW, canvasH);
+      img.data.fill(0); // Clear to fully transparent
       const ctx = img.getContext('2d');
       ctx.fillStyle = colorHex;
-      ctx.font = `${fontSize}pt '${fontName}'`;
-      ctx.fillText(i.toString(), startX, baselineY);
+      ctx.font = `${fontSize}pt ${fontName}`;
+      ctx.fillText(charStr, startX, baselineY);
 
       const filePath = path.join(assetsDir, `${prefixName}_${i}.png`);
       await PImage.encodePNGToStream(img, fs.createWriteStream(filePath));
@@ -1984,9 +1991,10 @@ async function generateAllFontAssets(config) {
 
     for (let i = 0; i < words.length; i++) {
       const img = PImage.make(canvasW, canvasH);
+      img.data.fill(0); // Clear to fully transparent
       const ctx = img.getContext('2d');
       ctx.fillStyle = colorHex;
-      ctx.font = `${fontSize}pt '${fontName}'`;
+      ctx.font = `${fontSize}pt ${fontName}`;
       ctx.fillText(words[i], startX, baselineY);
 
       const filePath = path.join(assetsDir, `${prefixName}_${prefix}_${i + 1}.png`);
@@ -1997,6 +2005,7 @@ async function generateAllFontAssets(config) {
   const drawHeartPng = async (t, colorHex) => {
     const size = 24;
     const img = PImage.make(size, size);
+    img.data.fill(0); // Clear to fully transparent
     const ctx = img.getContext('2d');
     
     // Draw beautiful filled heart shape
@@ -2016,6 +2025,7 @@ async function generateAllFontAssets(config) {
   const drawStepPng = async (t, colorHex) => {
     const size = 24;
     const img = PImage.make(size, size);
+    img.data.fill(0); // Clear to fully transparent
     const ctx = img.getContext('2d');
     ctx.fillStyle = colorHex;
     

@@ -1,8 +1,8 @@
 const THEMES = [
   {
-    line: 0xff7b90,
-    minute: 0xfff0f2,
-    steps: 0xff7b90
+    line: 0xff5a36,
+    minute: 0xeaf4ff,
+    steps: 0xff5a36
   },
   {
     line: 0xff7b90,    // Strawberry Yogurt
@@ -35,11 +35,11 @@ WatchFace({
   onInit() {
     console.log('aod page.js on init invoke')
     this.timeSensor = hmSensor.createSensor(hmSensor.id.TIME)
-    this.currentThemeIndex = 1
+    this.currentThemeIndex = 0
     try {
-      this.currentThemeIndex = hmFS.SysProGetInt('theme_idx') !== undefined ? hmFS.SysProGetInt('theme_idx') : 1
+      this.currentThemeIndex = hmFS.SysProGetInt('theme_idx') !== undefined ? hmFS.SysProGetInt('theme_idx') : 0
       if (this.currentThemeIndex < 0 || this.currentThemeIndex >= THEMES.length) {
-        this.currentThemeIndex = 1
+        this.currentThemeIndex = 0
       }
     } catch (e) {
       console.log('Read theme index failed', e)
@@ -62,33 +62,39 @@ WatchFace({
     })
 
 
-    // Hour Widget (AOD)
-    this.hourTextWidget = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
-      x: 40,
-      y: 148,
-      w: 180,
-      h: 130,
-      font_array: [
-        'h_${this.currentThemeIndex}_0.png', 'h_${this.currentThemeIndex}_1.png', 'h_${this.currentThemeIndex}_2.png', 'h_${this.currentThemeIndex}_3.png', 'h_${this.currentThemeIndex}_4.png',
-        'h_${this.currentThemeIndex}_5.png', 'h_${this.currentThemeIndex}_6.png', 'h_${this.currentThemeIndex}_7.png', 'h_${this.currentThemeIndex}_8.png', 'h_${this.currentThemeIndex}_9.png'
-      ],
-      h_space: 2,
-      text: '00'
-    })
+    // Hour Widgets (AOD - one per theme)
+    this.hourTextWidgets = []
+    for (let i = 0; i < THEMES.length; i++) {
+      this.hourTextWidgets.push(hmUI.createWidget(hmUI.widget.TEXT_IMG, {
+        x: 40,
+        y: 148,
+        w: 180,
+        h: 130,
+        font_array: [
+          'h_' + i + '_0.png', 'h_' + i + '_1.png', 'h_' + i + '_2.png', 'h_' + i + '_3.png', 'h_' + i + '_4.png',
+          'h_' + i + '_5.png', 'h_' + i + '_6.png', 'h_' + i + '_7.png', 'h_' + i + '_8.png', 'h_' + i + '_9.png'
+        ],
+        h_space: 2,
+        text: '00'
+      }))
+    }
       
-    // Minute Widget (AOD)
-    this.minuteTextWidget = hmUI.createWidget(hmUI.widget.TEXT_IMG, {
-      x: 244,
-      y: 148,
-      w: 180,
-      h: 130,
-      font_array: [
-        'm_${this.currentThemeIndex}_0.png', 'm_${this.currentThemeIndex}_1.png', 'm_${this.currentThemeIndex}_2.png', 'm_${this.currentThemeIndex}_3.png', 'm_${this.currentThemeIndex}_4.png',
-        'm_${this.currentThemeIndex}_5.png', 'm_${this.currentThemeIndex}_6.png', 'm_${this.currentThemeIndex}_7.png', 'm_${this.currentThemeIndex}_8.png', 'm_${this.currentThemeIndex}_9.png'
-      ],
-      h_space: 2,
-      text: '00'
-    })
+    // Minute Widgets (AOD - one per theme)
+    this.minuteTextWidgets = []
+    for (let i = 0; i < THEMES.length; i++) {
+      this.minuteTextWidgets.push(hmUI.createWidget(hmUI.widget.TEXT_IMG, {
+        x: 244,
+        y: 148,
+        w: 180,
+        h: 130,
+        font_array: [
+          'm_' + i + '_0.png', 'm_' + i + '_1.png', 'm_' + i + '_2.png', 'm_' + i + '_3.png', 'm_' + i + '_4.png',
+          'm_' + i + '_5.png', 'm_' + i + '_6.png', 'm_' + i + '_7.png', 'm_' + i + '_8.png', 'm_' + i + '_9.png'
+        ],
+        h_space: 2,
+        text: '00'
+      }))
+    }
       
     // Divider Accent Line (AOD)
     this.centerLineWidget = hmUI.createWidget(hmUI.widget.FILL_RECT, {
@@ -129,26 +135,15 @@ WatchFace({
   applyThemeColors() {
     const t = this.currentThemeIndex
     const theme = THEMES[t]
-    if (this.hourTextWidget) {
-      this.hourTextWidget.setProperty(hmUI.prop.MORE, {
-        font_array: [
-          'h_' + t + '_0.png', 'h_' + t + '_1.png', 'h_' + t + '_2.png', 'h_' + t + '_3.png', 'h_' + t + '_4.png',
-          'h_' + t + '_5.png', 'h_' + t + '_6.png', 'h_' + t + '_7.png', 'h_' + t + '_8.png', 'h_' + t + '_9.png'
-        ]
-      })
+    
+    for (let i = 0; i < THEMES.length; i++) {
+      const visible = (i === t)
+      if (this.hourTextWidgets && this.hourTextWidgets[i]) this.hourTextWidgets[i].setProperty(hmUI.prop.VISIBLE, visible)
+      if (this.minuteTextWidgets && this.minuteTextWidgets[i]) this.minuteTextWidgets[i].setProperty(hmUI.prop.VISIBLE, visible)
     }
-    if (this.minuteTextWidget) {
-      this.minuteTextWidget.setProperty(hmUI.prop.MORE, {
-        font_array: [
-          'm_' + t + '_0.png', 'm_' + t + '_1.png', 'm_' + t + '_2.png', 'm_' + t + '_3.png', 'm_' + t + '_4.png',
-          'm_' + t + '_5.png', 'm_' + t + '_6.png', 'm_' + t + '_7.png', 'm_' + t + '_8.png', 'm_' + t + '_9.png'
-        ]
-      })
-    }
+
     if (this.centerLineWidget) {
-      this.centerLineWidget.setProperty(hmUI.prop.MORE, {
-        color: theme.line
-      })
+      this.centerLineWidget.setProperty(hmUI.prop.COLOR, theme.line)
     }
   },
 
@@ -159,11 +154,15 @@ WatchFace({
     const hh = hour < 10 ? '0' + hour : '' + hour
     const mm = minute < 10 ? '0' + minute : '' + minute
 
-    if (this.hourTextWidget) {
-      this.hourTextWidget.setProperty(hmUI.prop.TEXT, hh)
+    if (this.hourTextWidgets) {
+      for (let i = 0; i < THEMES.length; i++) {
+        if (this.hourTextWidgets[i]) this.hourTextWidgets[i].setProperty(hmUI.prop.TEXT, hh)
+      }
     }
-    if (this.minuteTextWidget) {
-      this.minuteTextWidget.setProperty(hmUI.prop.TEXT, mm)
+    if (this.minuteTextWidgets) {
+      for (let i = 0; i < THEMES.length; i++) {
+        if (this.minuteTextWidgets[i]) this.minuteTextWidgets[i].setProperty(hmUI.prop.TEXT, mm)
+      }
     }
   },
 

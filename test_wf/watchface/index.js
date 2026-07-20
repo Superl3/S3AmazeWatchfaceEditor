@@ -1,8 +1,8 @@
 const THEMES = [
   {
-    line: 0xff7b90,
-    minute: 0xfff0f2,
-    steps: 0xff7b90
+    line: 0xff5a36,
+    minute: 0xeaf4ff,
+    steps: 0xff5a36
   },
   {
     line: 0xff7b90,    // Strawberry Yogurt
@@ -39,11 +39,11 @@ WatchFace({
     this.stepSensor = hmSensor.createSensor(hmSensor.id.STEP)
     this.heartSensor = hmSensor.createSensor(hmSensor.id.HEART)
 
-    this.currentThemeIndex = 1
+    this.currentThemeIndex = 0
     try {
-      this.currentThemeIndex = hmFS.SysProGetInt('theme_idx') !== undefined ? hmFS.SysProGetInt('theme_idx') : 1
+      this.currentThemeIndex = hmFS.SysProGetInt('theme_idx') !== undefined ? hmFS.SysProGetInt('theme_idx') : 0
       if (this.currentThemeIndex < 0 || this.currentThemeIndex >= THEMES.length) {
-        this.currentThemeIndex = 1
+        this.currentThemeIndex = 0
       }
     } catch (e) {
       console.log('Read theme index failed', e)
@@ -334,9 +334,7 @@ WatchFace({
       if (this.dayWidgets && this.dayWidgets[i]) this.dayWidgets[i].setProperty(hmUI.prop.VISIBLE, visible)
     }
       if (this.centerLineWidget) {
-      this.centerLineWidget.setProperty(hmUI.prop.MORE, {
-        color: theme.line
-      })
+      this.centerLineWidget.setProperty(hmUI.prop.COLOR, theme.line)
     }
     if (this.batteryOutline) this.batteryOutline.setProperty(hmUI.prop.COLOR, theme.line)
     if (this.batteryTip) this.batteryTip.setProperty(hmUI.prop.COLOR, theme.line)
