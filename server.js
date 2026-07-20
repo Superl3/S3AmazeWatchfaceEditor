@@ -391,7 +391,7 @@ async function generateThumbnail(config, destPath) {
       const rectImg = new Jimp(w.w || 2, w.h || 320, colorHex + 'ff');
       canvas.composite(rectImg, w.x, w.y);
     } else if (w.type === 'BATTERY') {
-      const colorHex = w.color === 'primary' ? primaryColor : (w.color === 'secondary' ? secondaryColor : w.customColor || '#ffffff');
+      const colorHex = secondaryColor;
       const tipColor = parseInt(colorHex.replace('#', '0x') + 'ff');
       
       const batOutline = await new Jimp(16, 24, 0x00000000);
@@ -1561,10 +1561,10 @@ function generateIndexJs(config) {
       this.centerLineWidget.setProperty(hmUI.prop.COLOR, theme.line)
     }\n`;
     } else if (w.type === 'BATTERY') {
-      themeApplyColors += `    if (this.batteryOutline) this.batteryOutline.setProperty(hmUI.prop.COLOR, theme.line)
-    if (this.batteryTip) this.batteryTip.setProperty(hmUI.prop.COLOR, theme.line)\n`;
+      themeApplyColors += `    if (this.batteryOutline) this.batteryOutline.setProperty(hmUI.prop.COLOR, theme.minute)
+    if (this.batteryTip) this.batteryTip.setProperty(hmUI.prop.COLOR, theme.minute)\n`;
       if (w.showProgress) {
-        themeApplyColors += "    if (this.batteryArcVal) this.batteryArcVal.setProperty(hmUI.prop.COLOR, theme.line)\n";
+        themeApplyColors += "    if (this.batteryArcVal) this.batteryArcVal.setProperty(hmUI.prop.COLOR, theme.minute)\n";
       }
     } else if (w.type === 'STEP') {
       themeApplyColors += `    if (this.stepsIconWidget) {

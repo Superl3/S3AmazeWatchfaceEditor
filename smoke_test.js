@@ -159,7 +159,7 @@ async function generatePreview() {
       canvas.composite(rectImg, w.x, w.y);
     } else if (w.type === 'BATTERY') {
       // Draw battery icon (16px tip outline, 12px bar)
-      const colorHex = w.color === 'primary' ? activePreset.primary : activePreset.secondary;
+      const colorHex = activePreset.secondary;
       const tipColor = parseInt(colorHex.replace('#', '0x') + 'ff');
       
       const batOutline = await new Jimp(16, 24, 0x00000000);
