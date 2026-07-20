@@ -317,6 +317,8 @@ app.post('/api/build', (req, res) => {
 // Dynamic Watchface Preview Thumbnail Generator (icon.png)
 async function generateThumbnail(config, destPath) {
   const canvas = await new Jimp(454, 454, 0x000000ff);
+  const themeIdx = config.themeIndex || 0;
+  const assetsDir = path.join(__dirname, 'test_wf', 'assets', '454x454-amazfit-gtr-3');
   
   // Composite Background
   if (config.backgroundStyle && config.backgroundStyle !== 'none') {
@@ -345,7 +347,6 @@ async function generateThumbnail(config, destPath) {
 
   // Draw outer subtle ring
   const ring = await new Jimp(454, 454, 0x00000000);
-  // Drawing concentric ring using custom pixel loop
   for (let x = 0; x < 454; x++) {
     for (let y = 0; y < 454; y++) {
       const dx = x - 227;
@@ -358,69 +359,94 @@ async function generateThumbnail(config, destPath) {
   }
   canvas.composite(ring, 0, 0);
 
-  // Load Colors
-  const activePreset = PRESETS[config.themeIndex] || PRESETS[0];
+  // Helper to composite TEXT_IMG widgets side-by-side (matching Zepp OS variable-width logic)
+  const drawTextImg = async (text, startX, y, prefix) => {
+    let currX = startX;
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      const charPath = path.join(assetsDir, `${prefix}_${char}.png`);
+      if (fs.existsSync(charPath)) {
+        const charImg = await Jimp.read(charPath);
+        canvas.composite(charImg, currX, y);
+        currX += charImg.bitmap.width + 2; // width + h_space (2px)
+      }
+    }
+  };
+
+  const activePreset = PRESETS[themeIdx] || PRESETS[0];
   const primaryColor = config.lineColor || activePreset.primary;
   const secondaryColor = config.minuteColor || activePreset.secondary;
 
-  const font32 = await Jimp.loadFont(Jimp.FONT_SANS_32_WHITE);
-  const font64 = await Jimp.loadFont(Jimp.FONT_SANS_64_WHITE);
-  const font16 = await Jimp.loadFont(Jimp.FONT_SANS_16_WHITE);
-
-  // Overlay Widgets
+  // Overlay Widgets matching actual assets
   const widgetsList = config.widgets || [];
   for (const w of widgetsList) {
-    let colorHex = w.color === 'primary' ? primaryColor : (w.color === 'secondary' ? secondaryColor : w.customColor || '#ffffff');
-    // Normalize colorHex
-    if (!colorHex.startsWith('#')) colorHex = '#' + colorHex;
-    
-    if (w.type === 'HOUR' || w.type === 'MINUTE') {
-      const textImg = new Jimp(180, 130, 0x00000000);
-      const useFont = w.size > 80 ? font64 : font32;
-      textImg.print(useFont, 40, 25, w.type === 'HOUR' ? '10' : '09');
-      textImg.color([{ apply: 'mix', params: [colorHex, 100] }]);
-      canvas.composite(textImg, w.x, w.y - 14);
-    } 
-    else if (w.type === 'DIVIDER') {
+    if (w.type === 'NONE') continue;
+
+    if (w.type === 'HOUR') {
+      await drawTextImg('13', w.x, w.y - 14, `h_${themeIdx}`);
+    } else if (w.type === 'MINUTE') {
+      await drawTextImg('48', w.x, w.y - 14, `m_${themeIdx}`);
+    } else if (w.type === 'DIVIDER') {
+      const colorHex = w.color === 'primary' ? primaryColor : (w.color === 'secondary' ? secondaryColor : w.customColor || '#ffffff');
       const rectImg = new Jimp(w.w || 2, w.h || 320, colorHex + 'ff');
       canvas.composite(rectImg, w.x, w.y);
-    } 
-    else if (['BATTERY', 'STEP', 'HEART', 'CAL', 'DISTANCE', 'WEEKDAY', 'DATE'].includes(w.type)) {
-      let labelVal = '';
-      if (w.type === 'BATTERY') labelVal = '85%';
-      else if (w.type === 'STEP') labelVal = '8.4K';
-      else if (w.type === 'HEART') labelVal = '72';
-      else if (w.type === 'CAL') labelVal = '340';
-      else if (w.type === 'DISTANCE') labelVal = '4.2';
-      else if (w.type === 'WEEKDAY') labelVal = 'MON';
-      else if (w.type === 'DATE') labelVal = 'JUL 16';
-
-      const labelImg = new Jimp(100, 30, 0x00000000);
-      labelImg.print(font16, 0, 0, labelVal);
-      labelImg.color([{ apply: 'mix', params: [colorHex, 100] }]);
+    } else if (w.type === 'BATTERY') {
+      const colorHex = w.color === 'primary' ? primaryColor : (w.color === 'secondary' ? secondaryColor : w.customColor || '#ffffff');
+      const tipColor = parseInt(colorHex.replace('#', '0x') + 'ff');
       
-      const offset = (w.showProgress && ['BATTERY', 'STEP'].includes(w.type)) ? 46 : 26;
-      canvas.composite(labelImg, w.x + offset, w.y - 12);
-
-      // Draw progress ring if enabled
-      if (w.showProgress && ['BATTERY', 'STEP'].includes(w.type)) {
-        const ringSize = 34;
-        const ring = new Jimp(ringSize, ringSize, 0x00000000);
-        for (let rx = 0; rx < ringSize; rx++) {
-          for (let ry = 0; ry < ringSize; ry++) {
-            const dx = rx - ringSize/2;
-            const dy = ry - ringSize/2;
-            const r = Math.sqrt(dx * dx + dy * dy);
-            if (Math.abs(r - 14) < 1.5) {
-              ring.setPixelColor(parseInt(colorHex.replace('#', '0x') + 'ff'), rx, ry);
-            }
+      const batOutline = await new Jimp(16, 24, 0x00000000);
+      for (let x = 0; x < 16; x++) {
+        for (let y = 0; y < 24; y++) {
+          if (x === 0 || x === 15 || y === 2 || y === 23) {
+            batOutline.setPixelColor(tipColor, x, y);
+          }
+          if (y === 0 && x >= 4 && x <= 11) {
+            batOutline.setPixelColor(tipColor, x, y);
+          }
+          if (y === 1 && (x === 4 || x === 11)) {
+            batOutline.setPixelColor(tipColor, x, y);
           }
         }
-        canvas.composite(ring, w.x, w.y - 12);
       }
-    }
-  }
+      canvas.composite(batOutline, w.x, w.y - 14);
 
+      const barH = 14;
+      const barY = 24 - 1 - barH;
+      const batBar = await new Jimp(10, barH, tipColor);
+      canvas.composite(batBar, w.x + 3, w.y - 14 + barY);
+
+      await drawTextImg('80', w.x + 24, w.y - 12, `b_${themeIdx}`);
+    } else if (w.type === 'HEART') {
+      const heartIconPath = path.join(assetsDir, `heart_${themeIdx}.png`);
+      if (fs.existsSync(heartIconPath)) {
+        const heartImg = await Jimp.read(heartIconPath);
+        canvas.composite(heartImg, w.x, w.y - 12);
+      }
+      await drawTextImg('72', w.x + 26, w.y - 12, `hr_${themeIdx}`);
+    } else if (w.type === 'STEP') {
+      const stepIconPath = path.join(assetsDir, `step_${themeIdx}.png`);
+      if (fs.existsSync(stepIconPath)) {
+        const stepImg = await Jimp.read(stepIconPath);
+        canvas.composite(stepImg, w.x, w.y - 12);
+      }
+      await drawTextImg('6245', w.x + 26, w.y - 12, `s_${themeIdx}`);
+    } else if (w.type === 'WEEKDAY') {
+      const weekPath = path.join(assetsDir, `w_${themeIdx}_week_4.png`);
+      if (fs.existsSync(weekPath)) {
+        const weekImg = await Jimp.read(weekPath);
+        canvas.composite(weekImg, w.x, w.y - 12);
+      }
+    } else if (w.type === 'DATE') {
+      const monthPath = path.join(assetsDir, `mon_${themeIdx}_month_7.png`);
+      let monthWidth = 0;
+      if (fs.existsSync(monthPath)) {
+        const monthImg = await Jimp.read(monthPath);
+        canvas.composite(monthImg, w.x, w.y - 12);
+        monthWidth = monthImg.bitmap.width;
+      }
+      await drawTextImg('16', w.x + monthWidth + 4, w.y - 12, `dt_${themeIdx}`);
+  }
+  }
   await canvas.writeAsync(destPath);
 }
 
