@@ -154,10 +154,45 @@ app.get('/api/background', async (req, res) => {
   }
 });
 
+function shouldRegenerateFontAssets(oldConfig, newConfig) {
+  if (!oldConfig) return true;
+  if (oldConfig.fontFamily !== newConfig.fontFamily) return true;
+  if (oldConfig.lineColor !== newConfig.lineColor) return true;
+  if (oldConfig.minuteColor !== newConfig.minuteColor) return true;
+  if (oldConfig.stepsColor !== newConfig.stepsColor) return true;
+
+  const oldWidgets = oldConfig.widgets || [];
+  const newWidgets = newConfig.widgets || [];
+  
+  const textTypes = ['HOUR', 'MINUTE', 'BATTERY', 'STEP', 'HEART', 'CAL', 'DISTANCE', 'WEEKDAY', 'DATE'];
+  
+  const getRelevantState = (w) => {
+    if (!w) return '';
+    return `${w.type}:${w.size || ''}:${w.color || ''}:${w.customColor || ''}`;
+  };
+
+  for (const type of textTypes) {
+    const oldW = oldWidgets.find(x => x.type === type);
+    const newW = newWidgets.find(x => x.type === type);
+    if (getRelevantState(oldW) !== getRelevantState(newW)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 // POST save configuration
 app.post('/api/save', async (req, res) => {
   try {
     const config = req.body;
+    let oldConfig = null;
+    if (fs.existsSync(CONFIG_PATH)) {
+      try {
+        oldConfig = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+      } catch (e) {}
+    }
+
     fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
 
     // Overwrite bg_${style}.png with custom spacing and rotation on the fly!
@@ -171,12 +206,20 @@ app.post('/api/save', async (req, res) => {
 
     // Auto-download selected custom TTF font and generate image assets for all themes
     if (config.fontFamily) {
-      try {
-        await downloadFont(config.fontFamily);
-        console.log('Generating image assets for all theme colors...');
-        await generateAllFontAssets(config);
-      } catch (fontErr) {
-        console.error('Failed to download custom font or generate assets:', fontErr);
+      const assetsDir = path.join(__dirname, 'test_wf', 'assets', '454x454-amazfit-gtr-3');
+      const hasAssets = fs.existsSync(assetsDir) && fs.readdirSync(assetsDir).filter(f => f.endsWith('.png')).length > 50;
+      const forceRegen = !hasAssets || shouldRegenerateFontAssets(oldConfig, config);
+
+      if (forceRegen) {
+        try {
+          await downloadFont(config.fontFamily);
+          console.log('Generating image assets for all theme colors...');
+          await generateAllFontAssets(config);
+        } catch (fontErr) {
+          console.error('Failed to download custom font or generate assets:', fontErr);
+        }
+      } else {
+        console.log('Skipping font asset regeneration (no relevant changes detected)');
       }
     }
 
@@ -225,12 +268,19 @@ app.post('/api/save', async (req, res) => {
 app.post('/api/build', (req, res) => {
   const testWfDir = path.join(__dirname, 'test_wf');
   
-  // Kill existing preview process if running
+  // Kill existing preview process tree if running
   if (previewProcess) {
-    console.log('Killing existing zeus preview process...');
+    console.log('Killing existing zeus preview process tree...');
     try {
-      previewProcess.kill();
-    } catch (e) {}
+      if (process.platform === 'win32') {
+        const { execSync } = require('child_process');
+        execSync(`taskkill /F /T /PID ${previewProcess.pid}`, { stdio: 'ignore' });
+      } else {
+        previewProcess.kill();
+      }
+    } catch (e) {
+      console.error('Failed to kill preview process tree:', e);
+    }
     previewProcess = null;
   }
 
@@ -303,11 +353,11 @@ app.post('/api/build', (req, res) => {
         return;
       }
       
-      if (attempts >= 300) { // 60 seconds timeout
+      if (attempts >= 600) { // 120 seconds timeout
         clearInterval(checkInterval);
         return res.status(500).json({ 
           error: 'Timeout waiting for QR code generation', 
-          details: 'The compile process took longer than 60 seconds due to PNG asset conversion. Please click compile again; the assets are now cached and it will finish immediately.' 
+          details: 'The compile process took longer than 120 seconds due to PNG asset conversion. Please click compile again; the assets are now cached and it will finish immediately.' 
         });
       }
     }, 200);
@@ -1977,6 +2027,22 @@ async function generateAllFontAssets(config) {
 
   const assetsDir = path.join(__dirname, 'test_wf', 'assets', '454x454-amazfit-gtr-3');
 
+  // Writable stream to capture pureimage PNG output into a buffer
+  const { Writable } = require('stream');
+  class BufferWritable extends Writable {
+    constructor() {
+      super();
+      this.chunks = [];
+    }
+    _write(chunk, encoding, callback) {
+      this.chunks.push(chunk);
+      callback();
+    }
+    toBuffer() {
+      return Buffer.concat(this.chunks);
+    }
+  }
+
   const renderDigits = async (prefixName, size, colorHex) => {
     const fontSize = Math.round(size * 0.9);
     
@@ -2003,7 +2069,16 @@ async function generateAllFontAssets(config) {
       ctx.fillText(charStr, startX, baselineY);
 
       const filePath = path.join(assetsDir, `${prefixName}_${i}.png`);
-      await PImage.encodePNGToStream(img, fs.createWriteStream(filePath));
+      const writable = new BufferWritable();
+      await PImage.encodePNGToStream(img, writable);
+      const buffer = writable.toBuffer();
+
+      // Only write to disk if content has actually changed to preserve timestamp
+      if (fs.existsSync(filePath)) {
+        const existing = fs.readFileSync(filePath);
+        if (existing.equals(buffer)) continue;
+      }
+      fs.writeFileSync(filePath, buffer);
     }
   };
 
@@ -2024,7 +2099,15 @@ async function generateAllFontAssets(config) {
       ctx.fillText(words[i], startX, baselineY);
 
       const filePath = path.join(assetsDir, `${prefixName}_${prefix}_${i + 1}.png`);
-      await PImage.encodePNGToStream(img, fs.createWriteStream(filePath));
+      const writable = new BufferWritable();
+      await PImage.encodePNGToStream(img, writable);
+      const buffer = writable.toBuffer();
+
+      if (fs.existsSync(filePath)) {
+        const existing = fs.readFileSync(filePath);
+        if (existing.equals(buffer)) continue;
+      }
+      fs.writeFileSync(filePath, buffer);
     }
   };
 
@@ -2045,7 +2128,15 @@ async function generateAllFontAssets(config) {
     ctx.fill();
 
     const filePath = path.join(assetsDir, `heart_${t}.png`);
-    await PImage.encodePNGToStream(img, fs.createWriteStream(filePath));
+    const writable = new BufferWritable();
+    await PImage.encodePNGToStream(img, writable);
+    const buffer = writable.toBuffer();
+
+    if (fs.existsSync(filePath)) {
+      const existing = fs.readFileSync(filePath);
+      if (existing.equals(buffer)) return;
+    }
+    fs.writeFileSync(filePath, buffer);
   };
 
   const drawStepPng = async (t, colorHex) => {
@@ -2082,7 +2173,15 @@ async function generateAllFontAssets(config) {
     ctx.fill();
 
     const filePath = path.join(assetsDir, `step_${t}.png`);
-    await PImage.encodePNGToStream(img, fs.createWriteStream(filePath));
+    const writable = new BufferWritable();
+    await PImage.encodePNGToStream(img, writable);
+    const buffer = writable.toBuffer();
+
+    if (fs.existsSync(filePath)) {
+      const existing = fs.readFileSync(filePath);
+      if (existing.equals(buffer)) return;
+    }
+    fs.writeFileSync(filePath, buffer);
   };
 
   const widgetsList = config.widgets || [];

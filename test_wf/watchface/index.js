@@ -336,8 +336,8 @@ WatchFace({
       if (this.centerLineWidget) {
       this.centerLineWidget.setProperty(hmUI.prop.COLOR, theme.line)
     }
-    if (this.batteryOutline) this.batteryOutline.setProperty(hmUI.prop.COLOR, theme.line)
-    if (this.batteryTip) this.batteryTip.setProperty(hmUI.prop.COLOR, theme.line)
+    if (this.batteryOutline) this.batteryOutline.setProperty(hmUI.prop.COLOR, theme.minute)
+    if (this.batteryTip) this.batteryTip.setProperty(hmUI.prop.COLOR, theme.minute)
     if (this.heartIconWidget) {
       this.heartIconWidget.setProperty(hmUI.prop.SRC, 'heart_' + t + '.png')
     }
